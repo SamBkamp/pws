@@ -20,6 +20,14 @@
 #define ERROR_PREPEND "\x1B[1;31m[ERROR]\x1B[0m "
 #define WARNING_PREPEND "\x1B[1;33m[WARN]\x1B[0m "
 
+#define LOG_FILE "pws.log"
+#define ERROR_FILE "pws_error.log"
+
+
+typedef struct{
+  uint8_t daemonize;
+}prog_opts;
+
 typedef struct ll_node{
   uint8_t requests;
   time_t conn_opened;

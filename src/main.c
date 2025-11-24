@@ -50,24 +50,30 @@ root_file_data files;
 
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
-  loaded_file *file = files.loaded_files;
+  loaded_file *found_file = files.loaded_files;
 
-  while((file-files.loaded_files) < MAX_OPEN_FILES
-        && file->file_path != NULL
-        && strcmp(file->file_path, path)!=0)
-    file++;
+  while((found_file-files.loaded_files) < MAX_OPEN_FILES
+        && found_file->file_path != NULL
+        && strcmp(found_file->file_path, path)!=0)
+    found_file++;
 
   //cached file hit
-  if((file-files.loaded_files) < MAX_OPEN_FILES
-     && file->file_path != NULL)
-    return file;
+  if((found_file-files.loaded_files) < MAX_OPEN_FILES
+     && found_file->file_path != NULL)
+    return found_file;
 
   //cache miss
-  loaded_file *new_load;
-  //we have space to allocate
-  if(file->file_path == NULL)
-    new_load = file;
-  else{ //no space to allocate (allocate to first)
+  long file_length = 0;
+  char *file_data  = open_file(path, &file_length);
+  //either not found or other mapping/IO failure
+  //TODO: let errno propagate explicitly
+  if(file_data == MAP_FAILED)
+    return (loaded_file *)-1;
+
+  loaded_file *new_load = found_file;
+
+  //if file found by while loop returns a non-empty loaded_file, we exhausted the cache and must wrap around
+  if(found_file->file_path != NULL){
     fputs(WARNING_PREPEND, stderr);
     fputs("File cache full, wrap around\n", stderr);
     for(loaded_file *current_file = files.loaded_files; current_file->file_path != NULL && (current_file-files.loaded_files) < MAX_OPEN_FILES; current_file++){
@@ -79,7 +85,9 @@ loaded_file *get_file_data(char* path){
   }
 
 
-  new_load->data = open_file(path, &new_load->length);
+  new_load->length = file_length;
+  new_load->data = file_data;
+
   //can I store file name data in mmap region? ie say the file is only 3kb large, I still have another 1kb of unused page. Can I store metadata there?
   new_load->file_path = malloc(strlen(path)+1);
   strcpy(new_load->file_path, path);
@@ -117,7 +125,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
   loaded_file *file_data = get_file_data(file_path);
 
   //file can't be opened for one reason or another
-  if(file_data->data == (char *)-1 || *file_path == (char)-1){
+  if(file_data == (loaded_file *)-1 || *file_path == (char)-1){
     res->response_code = 404;
     res->body = files.not_found->data;
     res->content_length = files.not_found->length;

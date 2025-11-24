@@ -5,3 +5,4 @@ pws
 certs/**
 config.h
 data/**
+**.log

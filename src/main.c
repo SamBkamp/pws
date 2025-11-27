@@ -208,8 +208,8 @@ int pws(){
     //check for unsecured connections (on HTTP_PORT)
     check_unsec_connection(&listener_sockets[0]);
 
+    //check for new connections
     if(clients_connected < CLIENTS_MAX && ret_poll > 0){
-      //check for new connections
       ll_node *new_conn = new_ssl_connections(&listener_sockets[1], tail, sslctx, ssl_sockfd);
       if(new_conn != NULL){
         tail = new_conn;
@@ -219,6 +219,9 @@ int pws(){
         //printf("new connection [%ld]. clients: %d\n", tail->conn_opened, clients_connected); //<-- logging that I don't think is useful in a prod env but don't wanna delete
       }
     }
+    //reached client connected max
+    if(clients_connected >= CLIENTS_MAX)
+      fputs(INFO_PREPEND"reached connected client max", stderr);
 
     //poll existing connections
     ret_poll = poll(secured_sockets, clients_connected, POLL_TIMEOUT);

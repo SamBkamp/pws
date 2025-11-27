@@ -19,6 +19,7 @@
 #define SSL_ERROR_PREPEND "\x1B[1;31m[SSL_ERROR]\x1B[0m "
 #define ERROR_PREPEND "\x1B[1;31m[ERROR]\x1B[0m "
 #define WARNING_PREPEND "\x1B[1;33m[WARN]\x1B[0m "
+#define INFO_PREPEND "\x1B[1;36m[INFO]\x1B[0m "
 
 #define LOG_FILE "pws.log"
 #define ERROR_FILE "pws_error.log"

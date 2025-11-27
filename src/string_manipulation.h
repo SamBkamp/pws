@@ -7,7 +7,7 @@ int parse_http_request(http_request *req, char* data);
 void free_http_request(http_request *req);
 char* long_to_ip(char* out, unsigned long IP);
 char *get_file_type(char* path);
-void print_SSL_accept_err(int SSL_err);
+void print_SSL_errstr(int SSL_err, FILE* stream);
 char *open_file(char *path, long *bytes);
 int load_default_files(root_file_data *root_file_st);
 #endif

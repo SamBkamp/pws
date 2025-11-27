@@ -249,7 +249,7 @@ int pws(){
         buffer[bytes_read] = 0;
         if(bytes_read <= 0){
           fputs(SSL_ERROR_PREPEND, stdout);
-          print_SSL_accept_err(SSL_get_error(conn->cSSL, bytes_read));
+          print_SSL_errstr(SSL_get_error(conn->cSSL, bytes_read), stderr);
           keep_alive_flag = 0;
         }
         else if(parse_http_request(&req, buffer) < 0

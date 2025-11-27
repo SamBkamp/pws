@@ -47,22 +47,22 @@ char *format_dirs(char *path, char *ret_path){
 }
 
 //helper function that turns an SSL error code into text. I could use built-in SSL error functions but its so complex and requires like 7 different function calls. This is good enough.
-void print_SSL_accept_err(int SSL_err){
+void print_SSL_errstr(int SSL_err, FILE* stream){
   switch(SSL_err){
   case SSL_ERROR_ZERO_RETURN:
-    printf("Connection close by peer: sent close_notify\n");
+    fputs("Connection close by peer: sent close_notify\n", stream);
     break;
   case SSL_ERROR_WANT_READ:
-    printf("Operation did not complete, can be retried later\n");
+    fputs("Operation did not complete, can be retried later\n", stream);
     break;
   case SSL_ERROR_SYSCALL:
-    printf("Fatal I/O Error\n");
+    fputs("Fatal I/O Error\n", stream);
     break;
   case SSL_ERROR_SSL:
-    printf("Fatal SSL Library Error (most likely protocol error)\n");
+    fputs("Fatal SSL Library Error (most likely protocol error)\n", stream);
     break;
   default:
-    printf("some freaking SSL error\n");
+    fputs("some freaking SSL error\n", stream);
     break;
   }
 }

@@ -144,7 +144,7 @@ ll_node* new_ssl_connections(struct pollfd *poll_settings, ll_node *tail, SSL_CT
     if(ssl_err <= 0){
       //i HATE openssl error handling
       fputs(SSL_ERROR_PREPEND, stdout);
-      print_SSL_accept_err(SSL_get_error(node->cSSL, ssl_err));
+      print_SSL_errstr(SSL_get_error(node->cSSL, ssl_err), stderr);
       destroy_node(node);
       return NULL;
     }

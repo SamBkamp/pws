@@ -48,6 +48,13 @@ static mime_type_t mime_types[] = {
 
 root_file_data files;
 
+//dumps buffered stdout to stdout
+//i think this is threadsafe
+void dump_logs(int sig){
+  if(sig == SIGUSR1)
+    fflush(stdout);
+}
+
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
   loaded_file *found_file = files.loaded_files;
@@ -150,6 +157,8 @@ int pws(){
     .next = NULL
   };
   ll_node *tail = &head;
+
+  signal(SIGUSR1, dump_logs);
 
   files.loaded_files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
   for(size_t i = 0; i < MAX_OPEN_FILES; i++){

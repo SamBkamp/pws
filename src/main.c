@@ -74,8 +74,7 @@ loaded_file *get_file_data(char* path){
 
   //if file found by while loop returns a non-empty loaded_file, we exhausted the cache and must wrap around
   if(found_file->file_path != NULL){
-    fputs(WARNING_PREPEND, stderr);
-    fputs("File cache full, wrap around\n", stderr);
+    fputs(WARNING_PREPEND"File cache full, wrap around\n", stderr);
     for(loaded_file *current_file = files.loaded_files; current_file->file_path != NULL && (current_file-files.loaded_files) < MAX_OPEN_FILES; current_file++){
       printf("%s |", current_file->file_path);
     }
@@ -159,10 +158,8 @@ int pws(){
   }
 
   //load default files into memory. Doesn't abort - should it?
-  if(load_default_files(&files) == -1){
-    fputs(WARNING_PREPEND, stderr);
-    perror("Couldn't load 404/500 error files");
-  }
+  if(load_default_files(&files) == -1)
+    perror(WARNING_PREPEND"Couldn't load 404/500 error files");
 
   //load openSSL nonsense (algos and strings)
   OpenSSL_add_all_algorithms();  //surely this can be changed to load just the ones we want?
@@ -221,13 +218,12 @@ int pws(){
     }
     //reached client connected max
     if(clients_connected >= CLIENTS_MAX)
-      fputs(INFO_PREPEND"reached connected client max", stderr);
+      fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
     //poll existing connections
     ret_poll = poll(secured_sockets, clients_connected, POLL_TIMEOUT);
     if(ret_poll<0){
-      fputs(ERROR_PREPEND, stderr);
-      fputs("poll failure\n", stderr);
+      fputs(ERROR_PREPEND"poll failure\n", stderr);
       continue;
     }
     if(ret_poll == 0) //no fd ready

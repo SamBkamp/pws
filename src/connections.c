@@ -69,8 +69,7 @@ void check_unsec_connection(struct pollfd *poll_settings){
     http_request req = {0};
     read(unsec_fd, incoming_data, 1023);
     if(parse_first_line(&req, incoming_data)<0){
-      fputs(ERROR_PREPEND, stderr);
-      fputs(" couldn't parse first line\n", stderr);
+      fputs(ERROR_PREPEND"couldn't parse first line\n", stderr);
       close(unsec_fd);
       return;
     }
@@ -87,8 +86,7 @@ void check_unsec_connection(struct pollfd *poll_settings){
     };
     if(send_http_response(&connection, &res) < 0)
       perror("write");
-    fputs(WARNING_PREPEND, stdout);
-    puts(" unsecured connection dealt with");
+    puts(WARNING_PREPEND"unsecured connection dealt with");
     close(unsec_fd);
     return;
   }

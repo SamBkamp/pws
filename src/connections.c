@@ -25,8 +25,9 @@ char **msd[] = {one_hundreds, two_hundreds, three_hundreds, four_hundreds, five_
 
 
 void destroy_node(ll_node *node){
-  SSL_shutdown(node->cSSL);
+  if(SSL_shutdown(node->cSSL)<0)perror(SSL_ERROR_PREPEND"ssl_shutdown");
   SSL_free(node->cSSL);
+  shutdown(node->fd, SHUT_RDWR);
   close(node->fd);
   free(node);
 }

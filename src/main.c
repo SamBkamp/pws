@@ -256,7 +256,7 @@ int pws(){
         bytes_read = SSL_read(conn->cSSL, buffer, 2047);
         buffer[bytes_read] = 0;
         if(bytes_read <= 0){
-          fputs(SSL_ERROR_PREPEND, stdout);
+          fputs(SSL_ERROR_PREPEND, stderr);
           print_SSL_errstr(SSL_get_error(conn->cSSL, bytes_read), stderr);
           keep_alive_flag = 0;
         }

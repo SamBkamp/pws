@@ -25,10 +25,22 @@ char **msd[] = {one_hundreds, two_hundreds, three_hundreds, four_hundreds, five_
 
 
 void destroy_node(ll_node *node){
-  if(SSL_shutdown(node->cSSL)<0)perror(SSL_ERROR_PREPEND"ssl_shutdown");
+  char ignore[1024];
+  int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
+  switch(ssl_shutdown_retval){
+  case 0:
+    fputs(INFO_PREPEND"shutdown not yet finished, reading from socket", stderr);
+    SSL_read(node->cSSL, ignore, 1024);
+  case 1:
+    break;
+  default:
+    fputs(SSL_ERROR_PREPEND"couldn't shut down ssl socket: ", stderr);
+    print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
+  }
+
   SSL_free(node->cSSL);
-  shutdown(node->fd, SHUT_RDWR);
-  close(node->fd);
+  if(shutdown(node->fd, SHUT_RDWR)<0) perror(WARNING_PREPEND"couldn't shuttdown()");
+  if(close(node->fd)<0) perror(WARNING_PREPEND"couldn't close()");
   free(node);
 }
 

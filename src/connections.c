@@ -29,11 +29,15 @@ void destroy_node(ll_node *node){
   int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
   switch(ssl_shutdown_retval){
   case 0:
+    //still needs to read from socket to complete bilateral shutdown 
     fputs(INFO_PREPEND"shutdown not yet finished, reading from socket\n", stderr);
-    SSL_read(node->cSSL, ignore, 1024);
-  case 1:
+    if(SSL_read(node->cSSL, ignore, 1024)<0){ //reading from socket to finish shutdown
+      fputs(SSL_ERROR_PREPEND"couldn't read from unfinished ssl socket: ", stderr);
+      print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
+    }
+  case 1: //successful shutdown
     break;
-  default:
+  default: //shutdown error
     fputs(SSL_ERROR_PREPEND"couldn't shut down ssl socket: ", stderr);
     print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
   }

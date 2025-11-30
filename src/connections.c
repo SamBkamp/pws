@@ -29,7 +29,7 @@ void destroy_node(ll_node *node){
   int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
   switch(ssl_shutdown_retval){
   case 0:
-    fputs(INFO_PREPEND"shutdown not yet finished, reading from socket", stderr);
+    fputs(INFO_PREPEND"shutdown not yet finished, reading from socket\n", stderr);
     SSL_read(node->cSSL, ignore, 1024);
   case 1:
     break;

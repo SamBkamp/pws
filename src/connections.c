@@ -77,7 +77,7 @@ void destroy_node(ll_node *node){
     //still needs to read from socket to complete bilateral shutdown
     fputs(INFO_PREPEND"shutdown not yet finished, reading from socket\n", stderr);
 
-    int read_res = block_limit_read(node->cSSL, 400, ignore, 1024);    //blocks while reading from ssl socket
+    int read_res = block_limit_read(node->cSSL, 300, ignore, 1024);    //blocks while reading from ssl socket
     int ssl_error_code = SSL_get_error(node->cSSL, read_res);
     if(read_res <= 0 && ssl_error_code != SSL_ERROR_ZERO_RETURN){ //if no error or the "error" is that the peer closed, everything worked
       //SSL_ERROR_ZERO_RETURN = peer sent close_notify
@@ -182,7 +182,7 @@ int send_http_response(ll_node* connection, http_response *res){
   int bytes;
   if(connection->cSSL != NULL){
     //>0 OK. 0<= ERR
-    bytes = block_limit_write(connection->cSSL, 50, buffer, bytes_printed);
+    bytes = block_limit_write(connection->cSSL, 200, buffer, bytes_printed);
     if(bytes <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes, stderr);
@@ -215,7 +215,7 @@ ll_node* new_ssl_connections(struct pollfd *poll_settings, ll_node *tail, SSL_CT
     node->cSSL = SSL_new(sslctx);
     SSL_set_fd(node->cSSL, node->fd);
 
-    ssl_err = block_limit_accept(node->cSSL, 50); //accept new connections (limit blocking)
+    ssl_err = block_limit_accept(node->cSSL, 200); //accept new connections (limit blocking)
     if(ssl_err<=0){ //if ssl_accept had an error
       int errtype = SSL_get_error(node->cSSL, ssl_err);
       fputs(SSL_ERROR_PREPEND"could not accept(): ", stderr);

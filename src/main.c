@@ -253,7 +253,7 @@ int pws(){
         keep_alive_flag = 0;
       else if((secured_sockets[connection_index].revents & POLLIN) > 0){
         //read and parse data
-        bytes_read = block_limit_read(conn->cSSL, 100, buffer, 2047);
+        bytes_read = block_limit_read(conn->cSSL, 200, buffer, 2047);
         buffer[bytes_read] = 0;
         if(bytes_read <= 0){
           fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);

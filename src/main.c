@@ -246,17 +246,17 @@ int pws(){
       uint8_t keep_alive_flag = 1;
       http_request req = {0};
       http_response res = {0};
+      char buffer[2048];
       //get poll results
       if((secured_sockets[connection_index].revents & POLLHUP) > 0
          || (secured_sockets[connection_index].revents & POLLERR) > 0)
         keep_alive_flag = 0;
       else if((secured_sockets[connection_index].revents & POLLIN) > 0){
         //read and parse data
-        char buffer[2048];
-        bytes_read = SSL_read(conn->cSSL, buffer, 2047);
+        bytes_read = block_limit_read(conn->cSSL, 100, buffer, 2047);
         buffer[bytes_read] = 0;
         if(bytes_read <= 0){
-          fputs(SSL_ERROR_PREPEND, stderr);
+          fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
           print_SSL_errstr(SSL_get_error(conn->cSSL, bytes_read), stderr);
           keep_alive_flag = 0;
         }

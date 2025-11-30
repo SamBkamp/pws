@@ -53,8 +53,11 @@ void print_SSL_errstr(int SSL_err, FILE* stream){
     fputs("Connection close by peer: sent close_notify\n", stream);
     break;
   case SSL_ERROR_WANT_READ:
-    fputs("Operation did not complete, can be retried later\n", stream);
+    fputs("Operation did not complete (wants to read), can be retried later\n", stream);
     break;
+  case SSL_ERROR_WANT_WRITE:
+    fputs("Operation did not complete (wants to write), can be retried later\n", stream);
+        break;
   case SSL_ERROR_SYSCALL:
     fputs("Fatal I/O Error\n", stream);
     break;

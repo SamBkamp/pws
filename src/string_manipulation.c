@@ -160,17 +160,20 @@ char* long_to_ip(char* out, unsigned long IP){
 //OPENS FOR READ ONLY
 //off_t is coerced into a long here, but this may not be portable. off_t isn't standard C (bruh), but standard posix (which doesn't give any info abt its width other than its signed...)
 //im just gonna assume this works until it doesn't
+//if bytes is 0, then file size will be queried and put into bytes, else it uses bytes as the size of the of the file
 char *open_file(char *path, long *bytes){
   struct stat sb;
   int filefd = open(path, O_RDONLY);
   if(filefd < 0)
     return MAP_FAILED;
-  if(fstat(filefd, &sb)< 0){
-    close(filefd);
-    return MAP_FAILED;
+  if(*bytes == 0){
+    if(fstat(filefd, &sb)< 0){
+      close(filefd);
+      return MAP_FAILED;
+    }
+    *bytes = sb.st_size;
   }
-  *bytes = sb.st_size;
-  char *retval = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, filefd, 0);
+  char *retval = mmap(NULL, *bytes, PROT_READ, MAP_SHARED, filefd, 0);
   close(filefd);
   return retval;
 }

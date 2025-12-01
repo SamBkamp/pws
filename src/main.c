@@ -58,6 +58,11 @@ void dump_logs(int sig){
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
   loaded_file *found_file = files.loaded_files;
+  struct stat sb;
+
+  //check if file even exists, quick return if no. not checking all errno bc regardless of what errno, this function cannot/should not continue
+  if(stat(path, &sb) < 0)
+    return (loaded_file *)-1;
 
   while((found_file-files.loaded_files) < MAX_OPEN_FILES
         && found_file->file_path != NULL
@@ -70,7 +75,7 @@ loaded_file *get_file_data(char* path){
     return found_file;
 
   //cache miss
-  long file_length = 0;
+  long file_length = sb.st_size; //stop re-lookup of file info
   char *file_data  = open_file(path, &file_length);
   //either not found or other mapping/IO failure
   //TODO: let errno propagate explicitly

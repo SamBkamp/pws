@@ -28,8 +28,8 @@ char **msd[] = {one_hundreds, two_hundreds, three_hundreds, four_hundreds, five_
 
 //blocking SSL_read but with attempt limit. If attempt limit is reached, the last SSL_read ret is returned
 //max blocking timeout is (limit*5)us
-int block_limit_read(SSL* cSSL, int limit, char* res_text, size_t res_text_size){
-  int idx = 0;
+int block_limit_read(SSL* cSSL, uint32_t limit, char* res_text, size_t res_text_size){
+  uint32_t idx = 0;
   int ret = SSL_read(cSSL, res_text, res_text_size);
   int errtype = SSL_get_error(cSSL, ret);
   while(errtype == SSL_ERROR_WANT_READ && idx < limit){ //we don't need to check ret as errtype will return a success macro if ret > 0 per docs
@@ -42,8 +42,8 @@ int block_limit_read(SSL* cSSL, int limit, char* res_text, size_t res_text_size)
 }
 
 //blocking SSL_write with attempt limit. See block_limit_read()
-int block_limit_write(SSL *cSSL, int limit, char* buf, int buf_size){
-  int idx = 0;
+int block_limit_write(SSL *cSSL, uint32_t limit, char* buf, int buf_size){
+  uint32_t idx = 0;
   int ret = SSL_write(cSSL, buf, buf_size);
   int errtype = SSL_get_error(cSSL, ret);
   while(errtype == SSL_ERROR_WANT_WRITE && idx < limit){
@@ -56,8 +56,8 @@ int block_limit_write(SSL *cSSL, int limit, char* buf, int buf_size){
 }
 
 //blocking SSL_accept() but with attempt limit. See block_limit_read()
-int block_limit_accept(SSL* cSSL, int limit){
-  int idx = 0;
+int block_limit_accept(SSL* cSSL, uint32_t limit){
+  uint32_t idx = 0;
   int ret = SSL_accept(cSSL);
   int errtype = SSL_get_error(cSSL, ret);
   while((errtype == SSL_ERROR_WANT_READ || errtype == SSL_ERROR_WANT_WRITE) && idx < limit){
@@ -76,8 +76,8 @@ void destroy_node(ll_node *node){
   case 0:
     //still needs to read from socket to complete bilateral shutdown
     fputs(INFO_PREPEND"shutdown not yet finished, reading from socket\n", stderr);
-
-    int read_res = block_limit_read(node->cSSL, 300, ignore, 1024);    //blocks while reading from ssl socket
+    uint32_t timeout = 300;
+    int read_res = block_limit_read(node->cSSL, timeout, ignore, 1024);    //blocks while reading from ssl socket
     int ssl_error_code = SSL_get_error(node->cSSL, read_res);
     if(read_res <= 0 && ssl_error_code != SSL_ERROR_ZERO_RETURN){ //if no error or the "error" is that the peer closed, everything worked
       //SSL_ERROR_ZERO_RETURN = peer sent close_notify
@@ -215,7 +215,8 @@ ll_node* new_ssl_connections(struct pollfd *poll_settings, ll_node *tail, SSL_CT
     node->cSSL = SSL_new(sslctx);
     SSL_set_fd(node->cSSL, node->fd);
 
-    ssl_err = block_limit_accept(node->cSSL, 2000); //accept new connections (limit blocking)
+    uint32_t timeout = 2000;
+    ssl_err = block_limit_accept(node->cSSL, timeout); //accept new connections (limit blocking)
     if(ssl_err<=0){ //if ssl_accept had an error
       int errtype = SSL_get_error(node->cSSL, ssl_err);
       fputs(SSL_ERROR_PREPEND"could not accept(): ", stderr);

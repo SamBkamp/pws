@@ -231,35 +231,37 @@ int send_http_response(ll_node* connection, http_response *res){
 
 //handler function to accept new SSL connections and append them to the Lnked List
 //returns 1 for new connection 0 for no new connection (so you can add it to a total)
-ll_node* new_ssl_connections(struct pollfd *poll_settings, ll_node *tail, SSL_CTX *sslctx, int ssl_sockfd){
-  if((poll_settings->revents & POLLIN) > 0){
-    int ssl_err;
-    ll_node *node = malloc(sizeof(ll_node));
-    node->peer_addr = malloc(sizeof(struct sockaddr_in));
-    node->peer_size = sizeof(struct sockaddr_in);
-    node->fd = accept4(ssl_sockfd, (struct sockaddr*)node->peer_addr, &node->peer_size, SOCK_NONBLOCK);
-    if(node->fd < 0){
-      perror("accept");
-      return NULL;
-    }
-    node->cSSL = SSL_new(sslctx);
-    SSL_set_fd(node->cSSL, node->fd);
+//should the arguments be coalesced into a smaller list?
+ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, struct pollfd *pfd){
+  ll_node *node = malloc(sizeof(ll_node));
+  int ssl_err;
+  uint32_t timeout = 2000;
 
-    uint32_t timeout = 2000;
-    ssl_err = block_limit_accept(node->cSSL, timeout); //accept new connections (limit blocking)
-    if(ssl_err<=0){ //if ssl_accept had an error
-      int errtype = SSL_get_error(node->cSSL, ssl_err);
-      fputs(SSL_ERROR_PREPEND"could not accept(): ", stderr);
-      print_SSL_errstr(errtype, stderr);
-      destroy_node(node);
-      return NULL;
-    }
-
-    node->requests = 0;
-    node->conn_opened = time(NULL);
-    node->next = NULL;
-    tail->next = node;
-    return tail->next;
+  node->peer_addr = malloc(sizeof(struct sockaddr_in));
+  node->peer_size = sizeof(struct sockaddr_in);
+  node->fd = accept4(ssl_sockfd, (struct sockaddr*)node->peer_addr, &node->peer_size, SOCK_NONBLOCK);
+  if(node->fd < 0){
+    perror(ERROR_PREPEND"accept");
+    return NULL;
   }
-  return NULL;
+  node->cSSL = SSL_new(sslctx);
+  SSL_set_fd(node->cSSL, node->fd);
+
+  ssl_err = block_limit_accept(node->cSSL, timeout); //accept new connections (limit blocking)
+  if(ssl_err<=0){ //if ssl_accept had an error
+    int errtype = SSL_get_error(node->cSSL, ssl_err);
+    fputs(SSL_ERROR_PREPEND"could not accept(): ", stderr);
+    print_SSL_errstr(errtype, stderr);
+    destroy_node(node);
+    return NULL;
+  }
+
+  node->requests = 0;
+  node->conn_opened = time(NULL);
+  node->next = NULL;
+  (*tail)->next = node;
+  pfd->fd = (*tail)->next->fd;
+  pfd->events = POLLIN | POLLOUT;
+  *tail = node;
+  return node;
 }

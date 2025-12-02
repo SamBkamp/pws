@@ -216,7 +216,7 @@ int pws(){
   //main event loop
   while(1){
     int ret_poll = poll(listener_sockets, 2, POLL_TIMEOUT);
-    //check for unsecured connections (on HTTP_PORT)
+    //checks poll for unsecured port and sends 301 message back
     check_unsec_connection(&listener_sockets[0]);
 
     //check for new connections

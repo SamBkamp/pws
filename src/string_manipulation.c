@@ -85,7 +85,6 @@ char *get_file_type(char* path){
 }
 
 //http parsing stuff
-
 //TODO: remove the need for this
 void free_http_request(http_request *req){
   if(req->host != NULL)

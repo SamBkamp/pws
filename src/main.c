@@ -278,12 +278,15 @@ int pws(){
   //main event loop
   while(1){
     int ret_poll = poll(p_ctx.listener_sockets, 2, POLL_TIMEOUT);
-    //checks poll for unsecured port and sends 301 message back
-    check_unsec_connection(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);
+
+    if(ret_poll == 0) //no new events
+      goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
+
+    if((p_ctx.listener_sockets[0].revents & POLLIN) > 0)
+      unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);
 
     //check for and then set up new connections
     if(p_ctx.clients_connected < CLIENTS_MAX
-       && ret_poll > 0
        && (p_ctx.listener_sockets[1].revents & POLLIN) > 0
        && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected]) != NULL)
       ++p_ctx.clients_connected;
@@ -292,18 +295,12 @@ int pws(){
     if(p_ctx.clients_connected >= CLIENTS_MAX)
       fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
-
-
-    //poll existing connections
+  handle_existing_connections:
     ret_poll = poll(p_ctx.secured_sockets, p_ctx.clients_connected, POLL_TIMEOUT);
     if(ret_poll<0){
-      fputs(ERROR_PREPEND"poll failure\n", stderr);
+      perror(ERROR_PREPEND"poll failure");
       continue;
     }
-    if(ret_poll == 0) //no fd ready
-      continue;
-
-    //service existing connections
     uint16_t connection_index = 0;
     ll_node *prev_conn = &head;
     for(ll_node *conn = head.next; conn != NULL; prev_conn = conn, conn = conn->next){
@@ -325,9 +322,12 @@ int pws(){
       conn = prev_conn;
       p_ctx.clients_connected--;
       //remove fd from pollfd array by moving all subsequent items down one (this shouldnt out of bounds bc in the case where connection_index+1 = out of bounds, last argument is 0)
-      memmove(&p_ctx.secured_sockets[connection_index], &p_ctx.secured_sockets[connection_index+1], sizeof(struct pollfd) * (p_ctx.clients_connected-connection_index));
+      memmove(&p_ctx.secured_sockets[connection_index],
+              &p_ctx.secured_sockets[connection_index+1],
+              sizeof(struct pollfd) * (p_ctx.clients_connected-connection_index));
     }
   }
+  //shouldnt reach here
   SSL_CTX_free(sslctx);
 }
 

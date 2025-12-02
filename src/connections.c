@@ -128,59 +128,57 @@ int open_connection(int *sockfd, int port){
 }
 
 //checks poll for unsecured port and sends 301 message back
-void check_unsec_connection(struct pollfd *poll_settings, char *hostname){
+void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   struct sockaddr_in peer;
   socklen_t peer_size = sizeof(peer);
-  if((poll_settings->revents & POLLIN) > 0){
-    int unsec_fd = accept4(poll_settings->fd, (struct sockaddr*)&peer, &peer_size, SOCK_NONBLOCK);
-    char incoming_data[1024];
-    http_request req = {0};
-    unsigned int idx = 0, max_retries = 4000;
-    int read_res;
+  int unsec_fd = accept4(poll_settings->fd, (struct sockaddr*)&peer, &peer_size, SOCK_NONBLOCK);
+  char incoming_data[1024];
+  http_request req = {0};
+  unsigned int idx = 0, max_retries = 4000;
+  int read_res;
 
-    if(unsec_fd < 0){
-      perror(ERROR_PREPEND"couldn't accept() unsecured conn");
-      return;
-    }
+  if(unsec_fd < 0){
+    perror(ERROR_PREPEND"couldn't accept() unsecured conn");
+    return;
+  }
 
-    //try to read up to max_retries times before failing
+  //try to read up to max_retries times before failing
+  read_res = read(unsec_fd, incoming_data, 1023);
+  if(read_res<0
+     && (errno == EAGAIN || errno == EWOULDBLOCK)
+     && idx < max_retries){
+    idx++;
     read_res = read(unsec_fd, incoming_data, 1023);
-    if(read_res<0
-       && (errno == EAGAIN || errno == EWOULDBLOCK)
-       && idx < max_retries){
-      idx++;
-      read_res = read(unsec_fd, incoming_data, 1023);
-    }
-    if(read_res<0){
-      perror(ERROR_PREPEND"couldn't read() http conn");
-      close(unsec_fd);
-      return;
-    }
-
-    if(parse_first_line(&req, incoming_data)<0){
-      fputs(ERROR_PREPEND"couldn't parse first line\n", stderr);
-      close(unsec_fd);
-      return;
-    }
-
-
-    snprintf(incoming_data, 1024, "%s%s", hostname, req.path);
-    ll_node connection = {
-      .fd = unsec_fd,
-      .cSSL = NULL,
-      .next = NULL
-    };
-    http_response res = {
-      .response_code = 301,
-      .location = incoming_data
-    };
-    if(send_http_response(&connection, &res) < 0)
-      perror("write");
-    puts(WARNING_PREPEND"unsecured connection dealt with");
+  }
+  if(read_res<0){
+    perror(ERROR_PREPEND"couldn't read() http conn");
     close(unsec_fd);
     return;
   }
+
+  if(parse_first_line(&req, incoming_data)<0){
+    fputs(ERROR_PREPEND"couldn't parse first line\n", stderr);
+    close(unsec_fd);
+    return;
+  }
+
+  snprintf(incoming_data, 1024, "%s%s", hostname, req.path);
+  ll_node connection = {
+    .fd = unsec_fd,
+    .cSSL = NULL,
+    .next = NULL
+  };
+  http_response res = {
+    .response_code = 301,
+    .location = incoming_data
+  };
+  if(send_http_response(&connection, &res) < 0)
+    perror(ERROR_PREPEND"write");
+  puts(WARNING_PREPEND"unsecured connection dealt with");
+  close(unsec_fd);
+  return;
 }
+
 
 int send_http_response(ll_node* connection, http_response *res){
   char *buffer = malloc(res->content_length + 1024);

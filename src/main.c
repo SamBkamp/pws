@@ -168,7 +168,7 @@ int pws(){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
   }
-  
+
   signal(SIGUSR1, dump_logs);
 
   files.loaded_files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
@@ -197,11 +197,11 @@ int pws(){
     fputs(SSL_ERROR_PREPEND"could not load certificate or private key\n", stderr);
     return 1;
   }
+
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
-  
-  
-  
+
+
   //opens socket, binds to address and sets socket to listening
   if(open_connection(&ssl_sockfd, HTTPS_PORT) != 0){
     perror("open_connection SSL");

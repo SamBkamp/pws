@@ -1,5 +1,5 @@
 PRIVATE_KEY_FILE = "certs/priv.pem"
-CERTIFICATE_FILE = "certs/certs.pem"
+CERTIFICATE_FILE = "certs/cert.pem"
 C_FULLCHAIN_FILE = 
 #this is a comment
 DOMAIN_HOST_NAME = "fish"

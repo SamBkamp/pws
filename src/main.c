@@ -157,44 +157,49 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
 
 uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, http_response *res, int connection_index, int clients_connected, config *cfg){
-  char buffer[2048];
-  uint8_t keep_alive_flag = 1;
+  char buffer[2048], ip_string[20];
   int bytes_read;
-  //get poll results
+  //socket hung up or error'd
   if((pfd->revents & POLLHUP) > 0
      || (pfd->events & POLLERR) > 0)
-    keep_alive_flag = 0;
-  else if((pfd->revents & POLLIN) > 0){
-    //read and parse data
-    bytes_read = block_limit_read(node->cSSL, 800, buffer, 2047);
-    buffer[bytes_read] = 0;
+    return 0;
 
-    if(bytes_read <= 0){ //couldn't read data
-      fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
-      print_SSL_errstr(SSL_get_error(node->cSSL, bytes_read), stderr);
-      keep_alive_flag = 0;
-    }else if(parse_http_request(req, buffer) < 0
-             || req->path == NULL
-             || req->host == NULL){ //could read but couldn't parse
-      printf("%s malformed query sent. length: %d\n", WARNING_PREPEND, bytes_read);
-      keep_alive_flag = 0;
-    }else{ //could read and could parse (success)
-      char ip_string[20];
-      printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",
-             long_to_ip(ip_string, node->peer_addr->sin_addr.s_addr),
-             node->fd,
-             connection_index+1, //connection_index starts at 0
-             clients_connected,
-             req->method,
-             req->path,
-             req->host,
-             connection_types[req->connection]);
+  //no data ready
+  if((pfd->revents & POLLIN) == 0)
+    return 1;
 
-      requests_handler(req, res, node, cfg);
-      keep_alive_flag = req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
-    }
+
+  bytes_read = block_limit_read(node->cSSL, 800, buffer, 2047);
+  buffer[bytes_read] = 0;
+
+  //couldn't read data
+  if(bytes_read <= 0){
+    fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
+    print_SSL_errstr(SSL_get_error(node->cSSL, bytes_read), stderr);
+    return 0;
   }
-  return keep_alive_flag;
+
+  //could read but couldn't parse
+  if(parse_http_request(req, buffer) < 0
+           || req->path == NULL
+           || req->host == NULL){
+    printf("%s malformed query sent. length: %d\n", WARNING_PREPEND, bytes_read);
+    return 0;
+  }
+
+  //everything has gone right
+  printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",
+         long_to_ip(ip_string, node->peer_addr->sin_addr.s_addr),
+         node->fd,
+         connection_index+1, //connection_index starts at 0
+         clients_connected,
+         req->method,
+         req->path,
+         req->host,
+         connection_types[req->connection]);
+
+  requests_handler(req, res, node, cfg);
+  return req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
 }
 
 

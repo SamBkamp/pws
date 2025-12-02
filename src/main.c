@@ -18,9 +18,9 @@
 #include <openssl/err.h>
 
 #include "prot.h"
+#include "file_io.h"
 #include "string_manipulation.h"
 #include "connections.h"
-#include "file_io.h"
 
 //I reckon this implementation might be temporary
 #define MAX_OPEN_FILES 20
@@ -112,6 +112,7 @@ loaded_file *get_file_data(char* path){
   return new_load;
 }
 
+
 //takes a request struct and sends back appropriate data to client
 //the http workhorse
 // returns 0 if successfully handled valid request
@@ -151,6 +152,49 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
   res->body = file_data->data;
   send_http_response(conn_details, res);
   return 0;
+}
+
+
+
+uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, http_response *res, int connection_index, int clients_connected, config *cfg){
+  char buffer[2048];
+  uint8_t keep_alive_flag = 1;
+  int bytes_read;
+  //get poll results
+  if((pfd->revents & POLLHUP) > 0
+     || (pfd->events & POLLERR) > 0)
+    keep_alive_flag = 0;
+  else if((pfd->revents & POLLIN) > 0){
+    //read and parse data
+    bytes_read = block_limit_read(node->cSSL, 800, buffer, 2047);
+    buffer[bytes_read] = 0;
+
+    if(bytes_read <= 0){ //couldn't read data
+      fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
+      print_SSL_errstr(SSL_get_error(node->cSSL, bytes_read), stderr);
+      keep_alive_flag = 0;
+    }else if(parse_http_request(req, buffer) < 0
+             || req->path == NULL
+             || req->host == NULL){ //could read but couldn't parse
+      printf("%s malformed query sent. length: %d\n", WARNING_PREPEND, bytes_read);
+      keep_alive_flag = 0;
+    }else{ //could read and could parse (success)
+      char ip_string[20];
+      printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",
+             long_to_ip(ip_string, node->peer_addr->sin_addr.s_addr),
+             node->fd,
+             connection_index+1, //connection_index starts at 0
+             clients_connected,
+             req->method,
+             req->path,
+             req->host,
+             connection_types[req->connection]);
+
+      requests_handler(req, res, node, cfg);
+      keep_alive_flag = req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
+    }
+  }
+  return keep_alive_flag;
 }
 
 
@@ -242,6 +286,8 @@ int pws(){
     if(clients_connected >= CLIENTS_MAX)
       fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
+
+
     //poll existing connections
     ret_poll = poll(secured_sockets, clients_connected, POLL_TIMEOUT);
     if(ret_poll<0){
@@ -255,45 +301,9 @@ int pws(){
     uint16_t connection_index = 0;
     ll_node *prev_conn = &head;
     for(ll_node *conn = head.next; conn != NULL; prev_conn = conn, conn = conn->next){
-      int bytes_read;
-      uint8_t keep_alive_flag = 1;
       http_request req = {0};
       http_response res = {0};
-      char buffer[2048];
-      //get poll results
-      if((secured_sockets[connection_index].revents & POLLHUP) > 0
-         || (secured_sockets[connection_index].revents & POLLERR) > 0)
-        keep_alive_flag = 0;
-      else if((secured_sockets[connection_index].revents & POLLIN) > 0){
-        //read and parse data
-        bytes_read = block_limit_read(conn->cSSL, 800, buffer, 2047);
-        buffer[bytes_read] = 0;
-
-        if(bytes_read <= 0){ //couldn't read data
-          fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
-          print_SSL_errstr(SSL_get_error(conn->cSSL, bytes_read), stderr);
-          keep_alive_flag = 0;
-        }else if(parse_http_request(&req, buffer) < 0
-           || req.path == NULL
-                 || req.host == NULL){ //could read but couldn't parse
-          printf("%s malformed query sent. length: %d\n", WARNING_PREPEND, bytes_read);
-          keep_alive_flag = 0;
-        }else{ //could read and could parse (success)
-          char ip_string[20];
-          printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",
-                 long_to_ip(ip_string, conn->peer_addr->sin_addr.s_addr),
-                 conn->fd,
-                 connection_index+1, //connection_index starts at 0
-                 clients_connected,
-                 req.method,
-                 req.path,
-                 req.host,
-                 connection_types[req.connection]);
-
-          requests_handler(&req, &res, conn, &cfg);
-          keep_alive_flag = req.connection & res.connection; //make sure both the client (req) and the server (res) want to keep-alive
-        }
-      }
+      uint8_t keep_alive_flag = handle_connection(&secured_sockets[connection_index], conn, &req, &res, connection_index, clients_connected, &cfg);
 
       //only skip the connection closing if both the client and the server want to keep the connection alive AND the connection hasn't timedout
       if(((time(NULL) - conn->conn_opened) < KEEP_ALIVE_TIMEOUT) && keep_alive_flag > 0){

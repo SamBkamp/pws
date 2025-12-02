@@ -73,4 +73,5 @@ typedef struct {
     char *ext;
     char *mime;
 } mime_type_t;
+
 #endif

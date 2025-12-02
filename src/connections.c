@@ -11,9 +11,9 @@
 #include <netdb.h>
 
 #include "prot.h"
+#include "file_io.h"
 #include "connections.h"
 #include "string_manipulation.h"
-#include "file_io.h"
 
 char *connection_types[] = {"close", "keep-alive"};
 
@@ -265,3 +265,4 @@ ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, st
   *tail = node;
   return node;
 }
+

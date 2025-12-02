@@ -156,17 +156,18 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
 
 
-uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, http_response *res, int connection_index, int clients_connected, config *cfg){
+uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *req, http_response *res, int connection_index){
   char buffer[2048], ip_string[20];
   int bytes_read;
+  struct pollfd connection_pollfd = ctx->secured_sockets[connection_index];
 
   //socket hung up or error'd
-  if((pfd->revents & POLLHUP) > 0
-     || (pfd->events & POLLERR) > 0)
+  if((connection_pollfd.revents & POLLHUP) > 0
+     || (connection_pollfd.events & POLLERR) > 0)
     return 0;
 
   //no data ready
-  if((pfd->revents & POLLIN) == 0)
+  if((connection_pollfd.revents & POLLIN) == 0)
     return 1;
 
 
@@ -193,13 +194,13 @@ uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, 
          long_to_ip(ip_string, node->peer_addr->sin_addr.s_addr),
          node->fd,
          connection_index+1, //connection_index starts at 0
-         clients_connected,
+         ctx->clients_connected,
          req->method,
          req->path,
          req->host,
          connection_types[req->connection]);
 
-  requests_handler(req, res, node, cfg);
+  requests_handler(req, res, node, &ctx->cfg);
   return req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
 }
 
@@ -308,7 +309,7 @@ int pws(){
     for(ll_node *conn = head.next; conn != NULL; prev_conn = conn, conn = conn->next){
       http_request req = {0};
       http_response res = {0};
-      uint8_t keep_alive_flag = handle_connection(&p_ctx.secured_sockets[connection_index], conn, &req, &res, connection_index, p_ctx.clients_connected, &p_ctx.cfg);
+      uint8_t keep_alive_flag = connections_handler(&p_ctx, conn, &req, &res, connection_index);
 
       //only skip the connection closing if both the client and the server want to keep the connection alive AND the connection hasn't timedout
       if(((time(NULL) - conn->conn_opened) < KEEP_ALIVE_TIMEOUT) && keep_alive_flag > 0){

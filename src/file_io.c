@@ -4,7 +4,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "config.h"
 #include "prot.h"
 #include "string_manipulation.h"
 #include "file_io.h"
@@ -81,11 +80,11 @@ int load_config(config *cfg){
   ssize_t bytes_read;
   int conf_fd = open("config.pws", O_RDONLY);
   
-  if(conf_fd<0) return 1;
+  if(conf_fd<0) return -1;
   if(fstat(conf_fd, &sb)<0 || sb.st_size >= FILE_BUFFER_SIZE) return 1;
 
   bytes_read = read(conf_fd, file_data, FILE_BUFFER_SIZE);
-  if(bytes_read < 0) return 1;
+  if(bytes_read < 0) return -1;
   
   file_data[bytes_read] = 0;  
   char *tok = strtok(file_data, "\n");
@@ -104,7 +103,7 @@ int load_config(config *cfg){
         cfg->document_root = val;
       else{
         printf("unknown directive %s\n", tok);
-        return 1;
+        return -1;
       }
     }
     tok = strtok(NULL, "\n");
@@ -114,4 +113,5 @@ int load_config(config *cfg){
   printf("fullchain path: %s\n", cfg->fullchain_path);
   printf("hostname: %s\n", cfg->hostname);
   printf("document_root: %s\n", cfg->document_root);
+  return 0;
 }

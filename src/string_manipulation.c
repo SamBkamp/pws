@@ -13,14 +13,13 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#include "config.h"
 #include "prot.h"
 #include "string_manipulation.h"
 #include "file_io.h"
 
 //function that sanitises and turns the http path into a file path on the system
 //retpath should be strlen(document_root) + strlen(path) + 20
-char *format_dirs(char *path, char *ret_path){
+char *format_dirs(char *path, char *ret_path, char *document_root){
   char append[20], *offset;
   int dots;
   //append index.html to the path if the path ends in a '/'
@@ -29,7 +28,7 @@ char *format_dirs(char *path, char *ret_path){
   else
     *append = 0;
   //combine document_root + path + optional append
-  sprintf(ret_path,"%s%s%s", DOCUMENT_ROOT, path, append);
+  sprintf(ret_path,"%s%s%s", document_root, path, append);
 
   //check if path is valid (doesn't contain ../ in it)
   dots = 0;

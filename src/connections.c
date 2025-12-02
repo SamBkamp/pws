@@ -10,7 +10,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#include "config.h"
 #include "prot.h"
 #include "connections.h"
 #include "string_manipulation.h"
@@ -129,7 +128,7 @@ int open_connection(int *sockfd, int port){
 }
 
 //checks poll for unsecured port and sends 301 message back
-void check_unsec_connection(struct pollfd *poll_settings){
+void check_unsec_connection(struct pollfd *poll_settings, char *hostname){
   struct sockaddr_in peer;
   socklen_t peer_size = sizeof(peer);
   if((poll_settings->revents & POLLIN) > 0){
@@ -165,7 +164,7 @@ void check_unsec_connection(struct pollfd *poll_settings){
     }
 
 
-    snprintf(incoming_data, 1024, "%s%s", HOST_NAME, req.path);
+    snprintf(incoming_data, 1024, "%s%s", hostname, req.path);
     ll_node connection = {
       .fd = unsec_fd,
       .cSSL = NULL,

@@ -17,7 +17,6 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-#include "config.h"
 #include "prot.h"
 #include "string_manipulation.h"
 #include "connections.h"
@@ -117,23 +116,23 @@ loaded_file *get_file_data(char* path){
 //the http workhorse
 // returns 0 if successfully handled valid request
 //returns -1 if connection is to be closed
-ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_details){
+ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_details, config *cfg){
   if(++conn_details->requests > KEEP_ALIVE_MAX_REQ)
     res->connection = CONNECTION_CLOSE;
   else
     res->connection = req->connection;
   //check if host is valid
-  if(strncmp(req->host, HOST_NAME, HOST_NAME_LEN) != 0
-     && strncmp(req->host+4, HOST_NAME, HOST_NAME_LEN) != 0){ //second condition is to check for www. connections (but currently accepts  first 4 chars lol) TODO: fix this
+  if(strncmp(req->host, cfg->hostname, cfg->hostname_len) != 0
+     && strncmp(req->host+4, cfg->hostname, cfg->hostname_len) != 0){ //second condition is to check for www. connections (but currently accepts  first 4 chars lol) TODO: fix this
     res->response_code = 301;
-    res->location = HOST_NAME;
+    res->location = cfg->hostname;
     res->connection = CONNECTION_CLOSE;
     send_http_response(conn_details, res);
     return -1;
   }
   //open file
-  char file_path[sizeof(DOCUMENT_ROOT) + strlen(req->path) + 20];
-  format_dirs(req->path, file_path);
+  char file_path[strlen(cfg->document_root) + strlen(req->path) + 20];
+  format_dirs(req->path, file_path, cfg->document_root);
   loaded_file *file_data = get_file_data(file_path);
 
   //file can't be opened for one reason or another
@@ -156,6 +155,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
 
 int pws(){
+  config cfg = {0};
   int ssl_sockfd, unsecured_sockfd, clients_connected = 0;
   struct pollfd listener_sockets[2], secured_sockets[CLIENTS_MAX];
   ll_node head = {
@@ -164,6 +164,11 @@ int pws(){
   };
   ll_node *tail = &head;
 
+  if(load_config(&cfg)<0){
+    fputs(WARNING_PREPEND"could not load config file\n", stderr);
+    return 1;
+  }
+  
   signal(SIGUSR1, dump_logs);
 
   files.loaded_files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
@@ -184,12 +189,19 @@ int pws(){
   //set up SSL context for all connections
   SSL_CTX *sslctx = SSL_CTX_new(TLS_server_method()); //create new ssl context
   SSL_CTX_set_options(sslctx, SSL_OP_SINGLE_DH_USE); //using single diffie helman, I guess?
-  int use_cert = SSL_CTX_use_certificate_file(sslctx, CERTIFICATE_FILE, SSL_FILETYPE_PEM);
-  int use_prv_key = SSL_CTX_use_PrivateKey_file(sslctx, PRIVATE_KEY_FILE, SSL_FILETYPE_PEM);
-  #ifdef FULLCHAIN_FILE
-  int use_chain = SSL_CTX_use_certificate_chain_file(sslctx, FULLCHAIN_FILE);
-  #endif
+  int use_cert = SSL_CTX_use_certificate_file(sslctx, cfg.certificate_path, SSL_FILETYPE_PEM);
+  int use_prv_key = SSL_CTX_use_PrivateKey_file(sslctx, cfg.private_key_path, SSL_FILETYPE_PEM);
+  int use_chain = SSL_CTX_use_certificate_chain_file(sslctx, cfg.fullchain_path);
 
+  if(use_cert != 1 || use_prv_key != 1){
+    fputs(SSL_ERROR_PREPEND"could not load certificate or private key\n", stderr);
+    return 1;
+  }
+  if(use_chain != 1)
+    fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
+  
+  
+  
   //opens socket, binds to address and sets socket to listening
   if(open_connection(&ssl_sockfd, HTTPS_PORT) != 0){
     perror("open_connection SSL");
@@ -218,7 +230,7 @@ int pws(){
   while(1){
     int ret_poll = poll(listener_sockets, 2, POLL_TIMEOUT);
     //checks poll for unsecured port and sends 301 message back
-    check_unsec_connection(&listener_sockets[0]);
+    check_unsec_connection(&listener_sockets[0], cfg.hostname);
 
     //check for new connections
     if(clients_connected < CLIENTS_MAX && ret_poll > 0){
@@ -228,7 +240,6 @@ int pws(){
         secured_sockets[clients_connected].fd = new_conn->fd;
         secured_sockets[clients_connected].events = POLLIN | POLLOUT;
         ++clients_connected;
-        //printf("new connection [%ld]. clients: %d\n", tail->conn_opened, clients_connected); //<-- logging that I don't think is useful in a prod env but don't wanna delete
       }
     }
     //reached client connected max
@@ -276,7 +287,7 @@ int pws(){
           char ip_string[20];
           //pass parsed data to the requests handler
           printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n", long_to_ip(ip_string, conn->peer_addr->sin_addr.s_addr), conn->fd, connection_index+1, clients_connected, req.method, req.path, req.host, connection_types[req.connection]);
-          requests_handler(&req, &res, conn);
+          requests_handler(&req, &res, conn, &cfg);
           keep_alive_flag = req.connection & res.connection;
         }
       }//close poll section
@@ -287,7 +298,6 @@ int pws(){
       }
 
       //close connection and remove from LL
-      //printf("closing connection [%ld] ", conn->conn_opened); <-- logging that I don't think is useful in a prod env but don't wanna delete
       prev_conn->next = conn->next;
       if(prev_conn->next == NULL) tail = prev_conn; //update tail if needed
       destroy_node(conn);

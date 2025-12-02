@@ -24,6 +24,21 @@
 #define LOG_FILE "pws.log"
 #define ERROR_FILE "pws_error.log"
 
+typedef struct{
+  char *private_key_path;
+  char *certificate_path;
+  char *fullchain_path;
+  char *hostname;
+  char *document_root;
+  unsigned int hostname_len;
+}config;
+
+typedef struct{
+  config cfg;
+  int clients_connected;
+  struct pollfd listener_sockets[2];
+  struct pollfd secured_sockets[CLIENTS_MAX];
+}program_context;
 
 typedef struct{
   uint8_t daemonize;
@@ -38,7 +53,6 @@ typedef struct ll_node{
   SSL *cSSL;
   struct ll_node *next;
 }ll_node;
-
 
 typedef struct{
   char method[10];

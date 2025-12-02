@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include "prot.h"
 #include "string_manipulation.h"

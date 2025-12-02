@@ -159,6 +159,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, http_response *res, int connection_index, int clients_connected, config *cfg){
   char buffer[2048], ip_string[20];
   int bytes_read;
+
   //socket hung up or error'd
   if((pfd->revents & POLLHUP) > 0
      || (pfd->events & POLLERR) > 0)
@@ -204,16 +205,15 @@ uint8_t handle_connection(struct pollfd *pfd, ll_node *node, http_request *req, 
 
 
 int pws(){
-  config cfg = {0};
-  int ssl_sockfd, unsecured_sockfd, clients_connected = 0;
-  struct pollfd listener_sockets[2], secured_sockets[CLIENTS_MAX];
+  program_context p_ctx = {0};
+  int ssl_sockfd, unsecured_sockfd;
   ll_node head = {
     .fd = 0,
     .next = NULL
   };
   ll_node *tail = &head;
 
-  if(load_config(&cfg)<0){
+  if(load_config(&p_ctx.cfg)<0){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
   }
@@ -238,9 +238,9 @@ int pws(){
   //set up SSL context for all connections
   SSL_CTX *sslctx = SSL_CTX_new(TLS_server_method()); //create new ssl context
   SSL_CTX_set_options(sslctx, SSL_OP_SINGLE_DH_USE); //using single diffie helman, I guess?
-  int use_cert = SSL_CTX_use_certificate_file(sslctx, cfg.certificate_path, SSL_FILETYPE_PEM);
-  int use_prv_key = SSL_CTX_use_PrivateKey_file(sslctx, cfg.private_key_path, SSL_FILETYPE_PEM);
-  int use_chain = SSL_CTX_use_certificate_chain_file(sslctx, cfg.fullchain_path);
+  int use_cert = SSL_CTX_use_certificate_file(sslctx, p_ctx.cfg.certificate_path, SSL_FILETYPE_PEM);
+  int use_prv_key = SSL_CTX_use_PrivateKey_file(sslctx, p_ctx.cfg.private_key_path, SSL_FILETYPE_PEM);
+  int use_chain = SSL_CTX_use_certificate_chain_file(sslctx, p_ctx.cfg.fullchain_path);
 
   if(use_cert != 1 || use_prv_key != 1){
     fputs(SSL_ERROR_PREPEND"could not load certificate or private key\n", stderr);
@@ -264,11 +264,11 @@ int pws(){
   }
   printf(INFO_PREPEND"unsecured port opened on %d\n", HTTP_PORT);
 
-  listener_sockets[0] = (struct pollfd){
+  p_ctx.listener_sockets[0] = (struct pollfd){
     .fd = unsecured_sockfd,
     .events = POLLIN | POLLOUT
   };
-  listener_sockets[1] = (struct pollfd){
+  p_ctx.listener_sockets[1] = (struct pollfd){
     .fd = ssl_sockfd,
     .events = POLLIN | POLLOUT
   };
@@ -276,25 +276,25 @@ int pws(){
 
   //main event loop
   while(1){
-    int ret_poll = poll(listener_sockets, 2, POLL_TIMEOUT);
+    int ret_poll = poll(p_ctx.listener_sockets, 2, POLL_TIMEOUT);
     //checks poll for unsecured port and sends 301 message back
-    check_unsec_connection(&listener_sockets[0], cfg.hostname);
+    check_unsec_connection(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);
 
     //check for and then set up new connections
-    if(clients_connected < CLIENTS_MAX
+    if(p_ctx.clients_connected < CLIENTS_MAX
        && ret_poll > 0
-       && (listener_sockets[1].revents & POLLIN) > 0
-       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &secured_sockets[clients_connected]) != NULL)
-      ++clients_connected;
+       && (p_ctx.listener_sockets[1].revents & POLLIN) > 0
+       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected]) != NULL)
+      ++p_ctx.clients_connected;
 
     //reached client connected max
-    if(clients_connected >= CLIENTS_MAX)
+    if(p_ctx.clients_connected >= CLIENTS_MAX)
       fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
 
 
     //poll existing connections
-    ret_poll = poll(secured_sockets, clients_connected, POLL_TIMEOUT);
+    ret_poll = poll(p_ctx.secured_sockets, p_ctx.clients_connected, POLL_TIMEOUT);
     if(ret_poll<0){
       fputs(ERROR_PREPEND"poll failure\n", stderr);
       continue;
@@ -308,7 +308,7 @@ int pws(){
     for(ll_node *conn = head.next; conn != NULL; prev_conn = conn, conn = conn->next){
       http_request req = {0};
       http_response res = {0};
-      uint8_t keep_alive_flag = handle_connection(&secured_sockets[connection_index], conn, &req, &res, connection_index, clients_connected, &cfg);
+      uint8_t keep_alive_flag = handle_connection(&p_ctx.secured_sockets[connection_index], conn, &req, &res, connection_index, p_ctx.clients_connected, &p_ctx.cfg);
 
       //only skip the connection closing if both the client and the server want to keep the connection alive AND the connection hasn't timedout
       if(((time(NULL) - conn->conn_opened) < KEEP_ALIVE_TIMEOUT) && keep_alive_flag > 0){
@@ -322,9 +322,9 @@ int pws(){
       destroy_node(conn);
       free_http_request(&req);
       conn = prev_conn;
-      clients_connected--;
+      p_ctx.clients_connected--;
       //remove fd from pollfd array by moving all subsequent items down one (this shouldnt out of bounds bc in the case where connection_index+1 = out of bounds, last argument is 0)
-      memmove(&secured_sockets[connection_index], &secured_sockets[connection_index+1], sizeof(struct pollfd) * (clients_connected-connection_index));
+      memmove(&p_ctx.secured_sockets[connection_index], &p_ctx.secured_sockets[connection_index+1], sizeof(struct pollfd) * (p_ctx.clients_connected-connection_index));
     }
   }
   SSL_CTX_free(sslctx);

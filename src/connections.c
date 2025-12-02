@@ -14,6 +14,7 @@
 #include "prot.h"
 #include "connections.h"
 #include "string_manipulation.h"
+#include "file_io.h"
 
 char *connection_types[] = {"close", "keep-alive"};
 

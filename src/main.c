@@ -21,6 +21,7 @@
 #include "prot.h"
 #include "string_manipulation.h"
 #include "connections.h"
+#include "file_io.h"
 
 //I reckon this implementation might be temporary
 #define MAX_OPEN_FILES 20

@@ -16,6 +16,7 @@
 #include "config.h"
 #include "prot.h"
 #include "string_manipulation.h"
+#include "file_io.h"
 
 //function that sanitises and turns the http path into a file path on the system
 //retpath should be strlen(document_root) + strlen(path) + 20
@@ -155,47 +156,4 @@ char* long_to_ip(char* out, unsigned long IP){
   }
   out_idx += sprintf(&out[out_idx], "%d", ((unsigned char*)&IP)[3]); //last digit has no trailing .
   return out;
-}
-//OPENS FOR READ ONLY
-//off_t is coerced into a long here, but this may not be portable. off_t isn't standard C (bruh), but standard posix (which doesn't give any info abt its width other than its signed...)
-//im just gonna assume this works until it doesn't
-//if bytes is 0, then file size will be queried and put into bytes, else it uses bytes as the size of the of the file
-char *open_file(char *path, long *bytes){
-  struct stat sb;
-  int filefd = open(path, O_RDONLY);
-  if(filefd < 0)
-    return MAP_FAILED;
-  if(*bytes == 0){
-    if(fstat(filefd, &sb)< 0){
-      close(filefd);
-      return MAP_FAILED;
-    }
-    *bytes = sb.st_size;
-  }
-  char *retval = mmap(NULL, *bytes, PROT_READ, MAP_SHARED, filefd, 0);
-  close(filefd);
-  return retval;
-}
-
-
-// init function that loads the 404 and 500 error message file into the root file struct
-int load_default_files(root_file_data *root_file_st){
-  loaded_file *not_found_file, *internal_server_error;
-
-  not_found_file = malloc(sizeof(loaded_file));
-  not_found_file->file_path = malloc(strlen("default/not_found.html"));
-  strcpy(not_found_file->file_path, "default/not_found.html");
-  not_found_file->data = open_file(not_found_file->file_path, &not_found_file->length);
-  root_file_st->not_found = not_found_file;
-
-  internal_server_error = malloc(sizeof(loaded_file));
-  internal_server_error->file_path = malloc(strlen("default/internal_server_error.html"));
-  strcpy(internal_server_error->file_path, "default/internal_server_error.html");
-  internal_server_error->data = open_file(internal_server_error->file_path, &internal_server_error->length);
-  root_file_st->internal_server_error = internal_server_error;
-
-  if(internal_server_error->data == MAP_FAILED
-     || not_found_file->data == MAP_FAILED)
-    return -1;
-  return 0;
 }

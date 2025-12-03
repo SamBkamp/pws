@@ -102,7 +102,7 @@ int parse_first_line(http_request *req, char* first_line){
   char *line_token = strtok(first_line, " ");
   if(line_token == NULL)
     return -1;
-  strncpy(req->method, line_token, 10);
+  strncpy(req->method, line_token, 9);
   //path
   line_token = strtok(NULL, " ");
   if(line_token == NULL)

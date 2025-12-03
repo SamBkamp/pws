@@ -1,10 +1,16 @@
-FLAGS := -Wall -Wextra -pedantic -ggdb
+BUILD_FLAGS := -Wall -Wextra -pedantic -O2
+DEV_FLAGS := -Wall -Wextra -pedantic -Werror -ggdb
 LIBS := -lcrypto -lssl
 FILES := src/main.c src/string_manipulation.c src/connections.c src/file_io.c
 
 .PHONY: all
+.PHONY: dev
 
 pws:${FILES}
-	cc $^ ${FLAGS} ${CFLAGS} -o $@ ${LIBS}
+	cc $^ ${BUILD_FLAGS} ${CFLAGS} -o $@ ${LIBS}
+
+pws_dev:${FILES}
+	cc $^ ${DEV_FLAGS} ${CFLAGS} -o $@ ${LIBS}
 
 all: pws
+dev: pws_dev

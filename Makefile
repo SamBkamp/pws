@@ -5,6 +5,6 @@ FILES := src/main.c src/string_manipulation.c src/connections.c src/file_io.c
 .PHONY: all
 
 pws:${FILES}
-	cc $^ ${FLAGS} -o $@ ${LIBS}
+	cc $^ ${FLAGS} ${CFLAGS} -o $@ ${LIBS}
 
 all: pws

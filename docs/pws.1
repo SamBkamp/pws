@@ -1,0 +1,41 @@
+.Dd December 3, 2025
+.Os
+.Dt pws 1
+
+.Sh NAME
+.Nm pws
+.Nd runs a fast, single-threaded webserver
+
+.Sh SYNOPSIS
+.Nm
+.Op Fl Fl daemonize
+
+.Sh DESCRIPTION
+.Nm
+is a fast, single-threaded, asynchronous, static webserver. If passed the
+.Em --daemonize
+option, the webserver starts as a daemon and detaches itself from the tty into its own process group. stdout and stderr are redirected to
+.Pa pws.log
+and
+.Pa pws_error.log
+in the directory pws was started.
+.br
+you must run this program as a priviledged user or with CAP_NET_BIND_SERVICE as it binds to ports 80 and 443
+.br
+if you run this program as a daemon, stdout is usually heavily buffered. You may instruct pws to flush its buffers by sending it a
+.Sy SIGUSR1
+signal.
+
+.Sh BUGS
+This server only accepts GET requests, any other request is discarded.
+
+.Sh REPORTING BUGS
+.Aq https://github.com/SamBkamp/pws
+
+.Sh AUTHOR
+Written by
+.An Sam Bonnekamp
+
+.Sh SEE ALSO
+.Xr kill 1 ,
+.Xr capabilities 7

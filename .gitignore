@@ -1,7 +1,6 @@
-a.out
 **~
-main
 pws
+pws_dev
 certs/**
 config.h
 data/**

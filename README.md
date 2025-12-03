@@ -31,8 +31,10 @@ When running PWS as a daemon, stdout and stderr will be rerouted to pws.log and 
 
 ## build instructions
 to compile pws, simply clone the repo and in the root directory run:
-`make`
+```
+make
+```
 et-voila.
 
-here is the call graph:
+## call graph
 ![callgraph for pws](docs/callgraph.png "callgraph")

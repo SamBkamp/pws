@@ -2,6 +2,8 @@
 #define MAIN_PROT
 #include <openssl/ssl.h>
 
+#define VERSION_NUMBER "PWS 1.0.0-beta"
+
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
 #define CLIENTS_MAX 10
@@ -76,12 +78,6 @@ typedef struct{
   char *data;
   long length;
 }loaded_file;
-
-typedef struct{
-  loaded_file *loaded_files;
-  loaded_file *not_found;
-  loaded_file *internal_server_error;
-}root_file_data;
 
 typedef struct {
     char *ext;

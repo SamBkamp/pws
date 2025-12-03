@@ -30,29 +30,6 @@ char *open_file(char *path, long *bytes){
   return retval;
 }
 
-// init function that loads the 404 and 500 error message file into the root file struct
-int load_default_files(root_file_data *root_file_st){
-  loaded_file *not_found_file, *internal_server_error;
-
-  not_found_file = malloc(sizeof(loaded_file));
-  not_found_file->file_path = malloc(strlen("default/not_found.html"));
-  strcpy(not_found_file->file_path, "default/not_found.html");
-  not_found_file->data = open_file(not_found_file->file_path, &not_found_file->length);
-  root_file_st->not_found = not_found_file;
-
-  internal_server_error = malloc(sizeof(loaded_file));
-  internal_server_error->file_path = malloc(strlen("default/internal_server_error.html"));
-  strcpy(internal_server_error->file_path, "default/internal_server_error.html");
-  internal_server_error->data = open_file(internal_server_error->file_path, &internal_server_error->length);
-  root_file_st->internal_server_error = internal_server_error;
-
-  if(internal_server_error->data == MAP_FAILED
-     || not_found_file->data == MAP_FAILED)
-    return -1;
-  return 0;
-}
-
-
 //takes a line src and returns a pointer to the value after the '='. puts a null terminator at the start of delimeter. Accounts for spaces either side of equals.
 //eg: field = value -> field\0= value (where val points to the first char of the value ie. 'v' in this case)
 //or filed=value -> field\0value

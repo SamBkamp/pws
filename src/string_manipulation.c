@@ -17,6 +17,7 @@
 #include "prot.h"
 #include "string_manipulation.h"
 #include "file_io.h"
+#include "connections.h"
 
 //function that sanitises and turns the http path into a file path on the system
 //retpath should be strlen(document_root) + strlen(path) + 20
@@ -156,4 +157,37 @@ char* long_to_ip(char* out, unsigned long IP){
   }
   out_idx += sprintf(&out[out_idx], "%d", ((unsigned char*)&IP)[3]); //last digit has no trailing .
   return out;
+}
+
+//generates a default page for 404s/500s etc
+char *generate_error(size_t code, size_t *len){
+  unsigned int response_lo_num = code%100; //2 lowest digits of http status code
+  unsigned int response_hi_num = (code - response_lo_num)/100; //highest digit of http status
+  char buffer[1024];
+  const char *format = "\
+<!DOCTYPE html>   \r\n\
+<html lang=\"en\">\r\n\
+<head> \r\n\
+  <meta charset=\"UTF-8\" /> \r\n\
+  <title>%s</title> \r\n\
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" /> \r\n\
+  <meta name=\"description\" content=\"\" /> \r\n\
+  <link rel=\"icon\" href=\"favicon.png\"> \r\n\
+</head>\r\n\
+<body>\r\n\
+  <h1 style='text-align:center'>%ld - %s</h1>\r\n\
+    <hr style='height: 1px; width: 70vw; background-color: black; margin: 0 auto;'>\
+  <h3 style='text-align:center'>"VERSION_NUMBER"</h3>\r\n                      \
+</body>\r\n\
+</html>";
+  *len = snprintf(buffer,
+                  1024,
+                  format,
+                  msd[response_hi_num-1][response_lo_num],
+                  code,
+                  msd[response_hi_num-1][response_lo_num]);
+  
+  char *retval = malloc(*len);
+  strncpy(retval, buffer, *len);
+  return retval;
 }

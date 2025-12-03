@@ -46,7 +46,7 @@ static mime_type_t mime_types[] = {
 };
 
 
-root_file_data files;
+loaded_file *files;
 
 //dumps buffered stdout to stdout
 //i think this is threadsafe
@@ -57,20 +57,20 @@ void dump_logs(int sig){
 
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
-  loaded_file *found_file = files.loaded_files;
+  loaded_file *found_file = files;
   struct stat sb;
 
   //check if file even exists, quick return if no. not checking all errno bc regardless of what errno, this function cannot/should not continue
   if(stat(path, &sb) < 0)
     return (loaded_file *)-1;
 
-  while((found_file-files.loaded_files) < MAX_OPEN_FILES
+  while((found_file-files) < MAX_OPEN_FILES
         && found_file->file_path != NULL
         && strcmp(found_file->file_path, path)!=0)
     found_file++;
 
   //cached file hit
-  if((found_file-files.loaded_files) < MAX_OPEN_FILES
+  if((found_file-files) < MAX_OPEN_FILES
      && found_file->file_path != NULL)
     return found_file;
 
@@ -87,12 +87,12 @@ loaded_file *get_file_data(char* path){
   //if file found by while loop returns a non-empty loaded_file, we exhausted the cache and must wrap around
   if(found_file->file_path != NULL){
     fputs(WARNING_PREPEND"File cache full, wrap around\n", stderr);
-    for(loaded_file *current_file = files.loaded_files; current_file->file_path != NULL && (current_file-files.loaded_files) < MAX_OPEN_FILES; current_file++){
+    for(loaded_file *current_file = files; current_file->file_path != NULL && (current_file-files) < MAX_OPEN_FILES; current_file++){
       printf("%s |", current_file->file_path);
     }
-    free(files.loaded_files[0].file_path);
-    munmap(files.loaded_files[0].data, files.loaded_files[0].length);
-    new_load = &files.loaded_files[0];
+    free(files[0].file_path);
+    munmap(files[0].data, files[0].length);
+    new_load = &files[0];
   }
 
 
@@ -118,38 +118,47 @@ loaded_file *get_file_data(char* path){
 // returns 0 if successfully handled valid request
 //returns -1 if connection is to be closed
 ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_details, config *cfg){
+  char file_path[strlen(cfg->document_root) + strlen(req->path) + 20];
+  loaded_file *file_data;
+  size_t content_len; //only used for calls to generate_error()
+
+  res->response_code = 200; //default
+
   if(++conn_details->requests > KEEP_ALIVE_MAX_REQ)
     res->connection = CONNECTION_CLOSE;
   else
     res->connection = req->connection;
-  //check if host is valid
+
+  //second condition is to check for www. connections (but currently accepts  first 4 chars lol) TODO: fix this
+  //check if hostname header is valid
   if(strncmp(req->host, cfg->hostname, cfg->hostname_len) != 0
-     && strncmp(req->host+4, cfg->hostname, cfg->hostname_len) != 0){ //second condition is to check for www. connections (but currently accepts  first 4 chars lol) TODO: fix this
+     && strncmp(req->host+4, cfg->hostname, cfg->hostname_len) != 0){
     res->response_code = 301;
     res->location = cfg->hostname;
-    res->connection = CONNECTION_CLOSE;
-    send_http_response(conn_details, res);
-    return -1;
   }
-  //open file
-  char file_path[strlen(cfg->document_root) + strlen(req->path) + 20];
+
+  //sanitize path then query file contents
   format_dirs(req->path, file_path, cfg->document_root);
-  loaded_file *file_data = get_file_data(file_path);
+  file_data = get_file_data(file_path);
 
   //file can't be opened for one reason or another
-  if(file_data == (loaded_file *)-1 || *file_path == (char)-1){
+  if(file_data == (loaded_file *)-1 || *file_path == (char)-1)
     res->response_code = 404;
-    res->body = files.not_found->data;
-    res->content_length = files.not_found->length;
+
+  if(res->response_code != 200){
+    res->connection = CONNECTION_CLOSE;
+    res->body = generate_error(res->response_code, &content_len);
+    res->content_length = content_len;
     res->content_type = "text/html";
     send_http_response(conn_details, res);
-    return 0;
+    free(res->body);
+    return -1;
   }
+
   //if file is valid and openable
-  res->response_code = 200;
-  res->content_type = file_data->mimetype;
-  res->content_length = file_data->length;
   res->body = file_data->data;
+  res->content_length = file_data->length;
+  res->content_type = file_data->mimetype;
   send_http_response(conn_details, res);
   return 0;
 }
@@ -221,15 +230,11 @@ int pws(){
 
   signal(SIGUSR1, dump_logs);
 
-  files.loaded_files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
+  files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
   for(size_t i = 0; i < MAX_OPEN_FILES; i++){
-    files.loaded_files[i].file_path = NULL;
-    files.loaded_files[i].data = NULL;
+    files[i].file_path = NULL;
+    files[i].data = NULL;
   }
-
-  //load default files into memory. Doesn't abort - should it?
-  if(load_default_files(&files) == -1)
-    perror(WARNING_PREPEND"Couldn't load 404/500 error files");
 
   //load openSSL nonsense (algos and strings)
   OpenSSL_add_all_algorithms();  //surely this can be changed to load just the ones we want?
@@ -250,7 +255,6 @@ int pws(){
 
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
-
 
   //opens socket, binds to address and sets socket to listening
   if(open_connection(&ssl_sockfd, HTTPS_PORT) != 0){

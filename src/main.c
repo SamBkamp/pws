@@ -148,9 +148,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
   }
 
 
-
   if(res->response_code != 200){
-    printf("code: %d\n", res->response_code);
     res->connection = CONNECTION_CLOSE;
     res->body = generate_error(res->response_code, &content_len);
     res->content_length = content_len;
@@ -319,6 +317,7 @@ int pws(){
       http_request req = {0};
       http_response res = {0};
       uint8_t keep_alive_flag = connections_handler(&p_ctx, conn, &req, &res, connection_index);
+      free_http_request(&req);
 
       //only skip the connection closing if both the client and the server want to keep the connection alive AND the connection hasn't timedout
       if(((time(NULL) - conn->conn_opened) < KEEP_ALIVE_TIMEOUT) && keep_alive_flag > 0){
@@ -330,7 +329,6 @@ int pws(){
       prev_conn->next = conn->next;
       if(prev_conn->next == NULL) tail = prev_conn; //update tail if needed
       destroy_node(conn);
-      free_http_request(&req);
       conn = prev_conn;
       p_ctx.clients_connected--;
       //remove fd from pollfd array by moving all subsequent items down one (this shouldnt out of bounds bc in the case where connection_index+1 = out of bounds, last argument is 0)

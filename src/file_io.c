@@ -4,6 +4,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <poll.h>
+#include <stdint.h>
+#include <openssl/ssl.h>
 
 #include "prot.h"
 #include "string_manipulation.h"

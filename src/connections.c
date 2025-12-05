@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <openssl/ssl.h>
 
 #include "prot.h"
 #include "file_io.h"

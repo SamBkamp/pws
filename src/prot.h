@@ -1,6 +1,5 @@
 #ifndef MAIN_PROT
 #define MAIN_PROT
-#include <openssl/ssl.h>
 
 #define VERSION_NUMBER "PWS 1.0.0-beta"
 

@@ -137,15 +137,20 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     res->location = cfg->hostname;
   }
 
-  //sanitize path then query file contents
-  format_dirs(req->path, file_path, cfg->document_root);
-  file_data = get_file_data(file_path);
+  //sanitize path
+  if(format_dirs(req->path, file_path, cfg->document_root) == NULL)
+    res->response_code = 403;
+  else{//valid path
+    file_data = get_file_data(file_path);
+    //file can't be opened
+    if(file_data == (loaded_file *)-1)
+      res->response_code = 404;
+  }
 
-  //file can't be opened for one reason or another
-  if(file_data == (loaded_file *)-1 || *file_path == (char)-1)
-    res->response_code = 404;
+
 
   if(res->response_code != 200){
+    printf("code: %d\n", res->response_code);
     res->connection = CONNECTION_CLOSE;
     res->body = generate_error(res->response_code, &content_len);
     res->content_length = content_len;

@@ -40,6 +40,7 @@ char *format_dirs(char *path, char *ret_path, char *document_root){
       dots++;
     else if(*offset == '/' && dots > 1){ // <- invalid condition, return error
       *ret_path = (char)-1;
+      return NULL;
       break;
     }else
       dots = 0;

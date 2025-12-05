@@ -228,6 +228,9 @@ int pws(){
   };
   ll_node *tail = &head;
 
+  //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
+  signal(SIGPIPE, SIG_IGN);
+
   if(load_config(&p_ctx.cfg)<0){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
@@ -366,8 +369,6 @@ void fork_worker(const char *path){
   freopen(LOG_FILE, "w", stdout);
   freopen(ERROR_FILE, "w", stderr);
 
-  //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
-  signal(SIGPIPE, SIG_IGN);
   //make sure buffer is flushed when signal arrives
   signal(SIGINT, sig_handler);
   signal(SIGABRT, sig_handler);

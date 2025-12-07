@@ -11,6 +11,8 @@
 #define METHOD_GET 1
 #define METHOD_POST 2
 
+#define HTTP_REQ_OBJ_METHOD_SIZE 10
+
 #define CONNECTION_CLOSE 0
 #define CONNECTION_KEEP_ALIVE 1
 
@@ -56,7 +58,7 @@ typedef struct ll_node{
 }ll_node;
 
 typedef struct{
-  char method[10];
+  char method[HTTP_REQ_OBJ_METHOD_SIZE];
   char *path;
   uint8_t connection;
   char *host;

@@ -118,7 +118,8 @@ loaded_file *get_file_data(char* path){
 // returns 0 if successfully handled valid request
 //returns -1 if connection is to be closed
 ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_details, config *cfg){
-  char file_path[strlen(cfg->document_root) + strlen(req->path) + 20];
+  size_t file_path_size = strlen(cfg->document_root) + strlen(req->path) + 20;
+  char file_path[file_path_size];
   loaded_file *file_data;
   size_t content_len; //only used for calls to generate_error()
 
@@ -138,7 +139,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
   }
 
   //sanitize path
-  if(format_dirs(req->path, file_path, cfg->document_root) == NULL)
+  if(format_dirs(req->path, file_path, file_path_size, cfg->document_root) == NULL)
     res->response_code = 403;
   else{//valid path
     file_data = get_file_data(file_path);
@@ -169,7 +170,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
 
 uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *req, http_response *res, int connection_index){
-  char buffer[2048], ip_string[20];
+  char buffer[2048], *ip_str;
   int bytes_read;
   struct pollfd connection_pollfd = ctx->secured_sockets[connection_index];
 
@@ -201,9 +202,10 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
     return 0;
   }
 
+  ip_str = long_to_ipstr(node->peer_addr->sin_addr.s_addr);
   //everything has gone right
   printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",
-         long_to_ip(ip_string, node->peer_addr->sin_addr.s_addr),
+         ip_str,
          node->fd,
          connection_index+1, //connection_index starts at 0
          ctx->clients_connected,
@@ -211,6 +213,7 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
          req->path,
          req->host,
          connection_types[req->connection]);
+  free(ip_str);
 
   requests_handler(req, res, node, &ctx->cfg);
   return req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive

@@ -21,7 +21,8 @@
 
 //function that sanitises and turns the http path into a file path on the system
 //retpath should be strlen(document_root) + strlen(path) + 20
-char *format_dirs(char *path, char *ret_path, char *document_root){
+//returns ret_path (which contains the sanitised path) if valid path or returns NULL if fatally invalid
+char *format_dirs(char *path, char *ret_path, size_t ret_path_size,char *document_root){
   char append[20], *offset;
   int dots;
   //append index.html to the path if the path ends in a '/'
@@ -30,7 +31,7 @@ char *format_dirs(char *path, char *ret_path, char *document_root){
   else
     *append = 0;
   //combine document_root + path + optional append
-  sprintf(ret_path,"%s%s%s", document_root, path, append);
+  snprintf(ret_path, ret_path_size, "%s%s%s", document_root, path, append);
 
   //check if path is valid (doesn't contain ../ in it)
   dots = 0;
@@ -103,7 +104,7 @@ int parse_first_line(http_request *req, char* first_line){
   char *line_token = strtok(first_line, " ");
   if(line_token == NULL)
     return -1;
-  strncpy(req->method, line_token, 9);
+  strncpy(req->method, line_token, HTTP_REQ_OBJ_METHOD_SIZE-1);
   //path
   line_token = strtok(NULL, " ");
   if(line_token == NULL)
@@ -150,8 +151,10 @@ int parse_http_request(http_request *req, char* data){
 }
 
 //stolen from: https://github.com/SamBkamp/c-server/blob/main/main.c
-char* long_to_ip(char* out, unsigned long IP){
-  memset(out, 0, 16); //16 bytes max for an IP string (with nullptr)
+char* long_to_ipstr(unsigned long IP){
+  //16 bytes max for an IP string (with nullptr)
+  char *out = malloc(16);
+  memset(out, 0, 16);
   size_t out_idx = 0;
   for(size_t i = 0; i < 3; i++){
     out_idx += sprintf(&out[out_idx], "%d.", ((unsigned char*)&IP)[i]);

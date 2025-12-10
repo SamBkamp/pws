@@ -278,11 +278,11 @@ int pws(){
   }
   printf(INFO_PREPEND"unsecured port opened on %d\n", HTTP_PORT);
 
-  p_ctx.listener_sockets[0] = (struct pollfd){
+  p_ctx.listener_sockets[SOCKET_HTTP] = (struct pollfd){
     .fd = unsecured_sockfd,
     .events = POLLIN | POLLOUT
   };
-  p_ctx.listener_sockets[1] = (struct pollfd){
+  p_ctx.listener_sockets[SOCKET_HTTPS] = (struct pollfd){
     .fd = ssl_sockfd,
     .events = POLLIN | POLLOUT
   };
@@ -295,12 +295,12 @@ int pws(){
     if(ret_poll == 0) //no new events
       goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
 
-    if((p_ctx.listener_sockets[0].revents & POLLIN) > 0)
+    if((p_ctx.listener_sockets[SOCKET_HTTP].revents & POLLIN) > 0)
       unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);
 
     //check for and then set up new connections
     if(p_ctx.clients_connected < CLIENTS_MAX
-       && (p_ctx.listener_sockets[1].revents & POLLIN) > 0
+       && (p_ctx.listener_sockets[SOCKET_HTTPS].revents & POLLIN) > 0
        && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected]) != NULL)
       ++p_ctx.clients_connected;
 

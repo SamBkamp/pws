@@ -8,8 +8,8 @@
 #define CLIENTS_MAX 10
 #define QUEUE_LEN 10
 #define POLL_TIMEOUT 50
-#define METHOD_GET 1
-#define METHOD_POST 2
+#define SOCKET_HTTP 0
+#define SOCKET_HTTPS 1
 
 #define HTTP_REQ_OBJ_METHOD_SIZE 10
 

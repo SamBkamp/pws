@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <openssl/ssl.h>
+#include <zlib.h>
 
 #include "prot.h"
 #include "file_io.h"
@@ -180,27 +181,60 @@ void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   return;
 }
 
+char *http_codestr_from_code(uint16_t response_code){
+  int response_cat = response_code - (response_code % 100);
+  char *msg = msd[(response_cat/100)-1][response_code-response_cat];
+  return msg;
+}
+
+size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
+  const char *default_headers = "HTTP/1.1 %d %s\r\nConnection: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n"; //headers that will always be sent
+  size_t bytes_printed = snprintf(buffer, buffer_len, default_headers,
+           res->response_code,
+           http_codestr_from_code(res->response_code),
+           connection_types[res->connection],
+           res->content_type,
+           res->content_length);
+
+  if(res->response_code == 301)
+    bytes_printed = snprintf(buffer, buffer_len-bytes_printed, "Location: %s\r\n", res->location);
+
+  buffer[bytes_printed] = '\r';
+  buffer[bytes_printed+1] = '\n';
+  buffer[bytes_printed+2] = 0;
+
+  return bytes_printed+2;
+}
+
 
 int send_http_response(ll_node* connection, http_response *res){
   char *buffer = malloc(res->content_length + 1024);
   size_t bytes_printed;
-  //response category (ie. first digit of response code)
-  int response_cat = res->response_code - (res->response_code % 100);
-  switch (response_cat){
-  case 300:
-    bytes_printed = sprintf(buffer, "HTTP/1.1 %d %s\r\nLocation: https://%s\r\nConnection: %s\r\n\r\n", res->response_code, msd[2][res->response_code-response_cat], res->location, connection_types[res->connection]);
+  /*
+  unsigned long len = res->content_length;
+  unsigned char *compressed_data = malloc(len);
+  switch(compress(compressed_data, &len, (unsigned char*)res->body, res->content_length)){
+
+  case Z_MEM_ERROR:
+    fputs(ERROR_PREPEND"compression error: not enough memory\n", stderr);
     break;
-  default:
-    bytes_printed = sprintf(buffer, "HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length:%ld\r\nConnection: %s\r\n\r\n", res->response_code, msd[(response_cat/100)-1][res->response_code-response_cat], res->content_type, res->content_length, connection_types[res->connection]);
-    memcpy(buffer+bytes_printed, res->body, res->content_length);
-    bytes_printed+=res->content_length;
-    *(buffer+bytes_printed) = '\r';
-    bytes_printed++;
-    *(buffer+bytes_printed) = '\n';
-    bytes_printed++;
+  case Z_BUF_ERROR:
+    fputs(ERROR_PREPEND"compression error: not enough output buffer\n", stderr);
     break;
   }
+  */
+  bytes_printed = construct_headers(res, buffer, res->content_length+1024);
 
+
+  memcpy(buffer+bytes_printed, res->body, res->content_length);
+  bytes_printed+=res->content_length;
+  *(buffer+bytes_printed) = '\r';
+  bytes_printed++;
+  *(buffer+bytes_printed) = '\n';
+  bytes_printed++;
+
+
+  printf("response: %s", buffer);
   int bytes;
   if(connection->cSSL != NULL){
     //>0 OK. 0<= ERR
@@ -264,4 +298,3 @@ ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, st
   *tail = node;
   return node;
 }
-

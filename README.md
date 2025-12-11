@@ -29,6 +29,20 @@ When running PWS as a daemon, stdout and stderr will be rerouted to pws.log and 
 ### optional fields (can be left blank):
 - C_FULLCHAIN_FILE
 
+
+## dependencies
+pws depends on libcrypto, OpenSSL and zlib. These are most likely already on your system, but in the case they aren't, you can install them with:
+```bash
+sudo apt install openssl zlib1g
+```
+If you are compiling pws from source you will instead need to install the development libraries:
+```bash
+sudo apt install libssl-dev zlib1g-dev
+```
+They will most likely be called the same or similar things on other package managers.
+
+I have not tested which versions are compatible, but I would guess that any recent (last 5 years) release will probably do. On my development machine I am running zlib 1.2.13 and OpenSSL 3.0.17
+
 ## build instructions
 to compile pws, simply clone the repo and in the root directory run:
 ```

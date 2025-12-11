@@ -165,7 +165,7 @@ void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
     return;
   }
 
-  snprintf(incoming_data, 1024, "%s%s", hostname, req.path);
+  snprintf(incoming_data, 1024, "https://%s%s", hostname, req.path);
   ll_node connection = {
     .fd = unsec_fd,
     .cSSL = NULL,
@@ -173,7 +173,9 @@ void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   };
   http_response res = {
     .response_code = 301,
-    .location = incoming_data
+    .location = incoming_data,
+    .content_encoding = NULL,
+    .content_type = "text/html"
   };
   if(send_http_response(&connection, &res) < 0)
     perror(ERROR_PREPEND"write");

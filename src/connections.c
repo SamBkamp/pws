@@ -215,24 +215,6 @@ int send_http_response(ll_node* connection, http_response *res){
   char *buffer = malloc(res->content_length + 1024);
   size_t bytes_printed;
 
-  /*
-  unsigned long len = res->content_length;
-  unsigned char *compressed_data = malloc(len);
-  switch(compress(compressed_data, &len, (unsigned char*)res->body, res->content_length)){
-
-  case Z_MEM_ERROR:
-    fputs(ERROR_PREPEND"compression error: not enough memory\n", stderr);
-    break;
-  case Z_BUF_ERROR:
-    fputs(ERROR_PREPEND"compression error: not enough output buffer\n", stderr);
-    break;
-  default:
-    res->content_encoding = encoding_types[0];
-    res->body = (char*)compressed_data;
-    res->content_length = len;
-    break;
-  }
-  */
 
   //headers
   bytes_printed = construct_headers(res, buffer, res->content_length+1024);

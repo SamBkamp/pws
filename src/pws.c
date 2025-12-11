@@ -57,6 +57,30 @@ void dump_logs(int sig){
     fflush(stdout);
 }
 
+int compress_file_data(loaded_file *lf){
+  unsigned long compressed_data_len = lf->length;
+  unsigned char *compressed_data = malloc(compressed_data_len);
+  int deflate = compress(compressed_data,
+                         &compressed_data_len,
+                         (unsigned char*)lf->data,
+                         lf->length);
+  switch(deflate){
+  case Z_MEM_ERROR:
+  case Z_BUF_ERROR:
+    lf->compressed_data = NULL;
+    lf->compressed_length = 0;
+    free(compressed_data);
+    return deflate;
+    break;
+  default:
+    lf->compressed_data = (char*)compressed_data;
+    lf->compressed_length = compressed_data_len;
+    break;
+  }
+  return 0;
+}
+
+
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
   loaded_file *found_file = files;
@@ -109,6 +133,12 @@ loaded_file *get_file_data(char* path){
       break;
   }
   found_file->mimetype = type->mime;
+  //only compress files if they are text
+  if(strncmp(found_file->mimetype, "text", 4)==0){
+    if(compress_file_data(found_file)!=0)
+      fprintf(stderr, ERROR_PREPEND"unable to compress %s\n", found_file->file_path);
+  }
+
   return found_file;
 }
 
@@ -160,8 +190,15 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
   }
 
   //if file is valid and openable
-  res->body = file_data->data;
-  res->content_length = file_data->length;
+  //check if data has compressed version, send that if available
+  if(file_data->compressed_data != NULL){
+    res->body = file_data->compressed_data;
+    res->content_length = file_data->compressed_length;
+    res->content_encoding = encoding_types[CE_DEFLATE];
+  }else{
+    res->body = file_data->data;
+    res->content_length = file_data->length;
+  }
   res->content_type = file_data->mimetype;
   send_http_response(conn_details, res);
   return 0;
@@ -347,5 +384,3 @@ int pws(){
   //shouldnt reach here
   SSL_CTX_free(sslctx);
 }
-
-

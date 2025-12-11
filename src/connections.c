@@ -232,7 +232,7 @@ int send_http_response(ll_node* connection, http_response *res){
   bytes_printed++;
   *(buffer+bytes_printed) = '\n';
   bytes_printed++;
-
+  *(buffer+bytes_printed) = 0;
 
   printf("response: %s", buffer);
   int bytes;

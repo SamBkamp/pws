@@ -1,7 +1,7 @@
 BUILD_FLAGS := -Wall -Wextra -pedantic -O2
 DEV_FLAGS := -Wall -Wextra -pedantic -Werror -ggdb
 LIBS := -lcrypto -lssl
-FILES := src/main.c src/string_manipulation.c src/connections.c src/file_io.c
+FILES := main.c src/pws.c src/string_manipulation.c src/connections.c src/file_io.c
 
 .PHONY: all
 .PHONY: dev

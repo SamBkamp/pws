@@ -116,6 +116,8 @@ loaded_file *get_file_data(char* path){
     }
     free(files[0].file_path);
     munmap(files[0].data, files[0].length);
+    if(files[0].compressed_data != NULL)
+      free(files[0].compressed_data);
     found_file = &files[0];
   }
 

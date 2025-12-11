@@ -69,11 +69,12 @@ typedef struct{
 
 typedef struct{
   uint16_t response_code;
-  char *content_type;
   size_t content_length;
-  char *location;
-  char *body;
   uint8_t connection;
+  char *content_type;
+  char *location;
+  char *content_encoding;
+  char *body;
 }http_response;
 
 typedef struct{

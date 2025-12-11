@@ -18,6 +18,7 @@
 #include "string_manipulation.h"
 
 char *connection_types[] = {"close", "keep-alive"};
+char *encoding_types[] = {"deflate"};
 
 //not all implemented (obviously)
 char *one_hundreds[] = {"Continue", "Switching Protocols"};
@@ -197,7 +198,10 @@ size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
            res->content_length);
 
   if(res->response_code == 301)
-    bytes_printed = snprintf(buffer, buffer_len-bytes_printed, "Location: %s\r\n", res->location);
+    bytes_printed += snprintf(buffer+bytes_printed, buffer_len-bytes_printed, "Location: %s\r\n", res->location);
+
+  if(res->content_encoding != NULL)
+    bytes_printed += snprintf(buffer+bytes_printed, buffer_len-bytes_printed, "Content-Encoding: %s\r\n", res->content_encoding);
 
   buffer[bytes_printed] = '\r';
   buffer[bytes_printed+1] = '\n';
@@ -210,6 +214,7 @@ size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
 int send_http_response(ll_node* connection, http_response *res){
   char *buffer = malloc(res->content_length + 1024);
   size_t bytes_printed;
+
   /*
   unsigned long len = res->content_length;
   unsigned char *compressed_data = malloc(len);
@@ -221,11 +226,17 @@ int send_http_response(ll_node* connection, http_response *res){
   case Z_BUF_ERROR:
     fputs(ERROR_PREPEND"compression error: not enough output buffer\n", stderr);
     break;
+  default:
+    res->content_encoding = encoding_types[0];
+    res->body = (char*)compressed_data;
+    res->content_length = len;
+    break;
   }
   */
+
+  //headers
   bytes_printed = construct_headers(res, buffer, res->content_length+1024);
-
-
+  //body
   memcpy(buffer+bytes_printed, res->body, res->content_length);
   bytes_printed+=res->content_length;
   *(buffer+bytes_printed) = '\r';
@@ -234,17 +245,16 @@ int send_http_response(ll_node* connection, http_response *res){
   bytes_printed++;
   *(buffer+bytes_printed) = 0;
 
-  printf("response: %s", buffer);
   int bytes;
   if(connection->cSSL != NULL){
-    //>0 OK. 0<= ERR
+    //returns >0 OK. 0<= ERR
     bytes = block_limit_write(connection->cSSL, 800, buffer, bytes_printed);
     if(bytes <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes, stderr);
     }
   }else{
-    // nbytes OK. <0 ERR
+    // returns n-bytes OK, < 0 ERR
     unsigned int idx = 0, max_retries = 2000;
     bytes = write(connection->fd, buffer, bytes_printed);
     if(bytes<0

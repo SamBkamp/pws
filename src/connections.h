@@ -2,6 +2,7 @@
 #ifndef PWS_CONNECTIONS
 #define PWS_CONNECTIONS
 extern char *connection_types[];
+extern char *encoding_types[];
 extern char *one_hundreds[];
 extern char *two_hundreds[];
 extern char *three_hundreds[];

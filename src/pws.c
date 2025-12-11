@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <zlib.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -221,6 +223,7 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
 int pws(){
   puts(VERSION_NUMBER);
   fputs("zlib ", stdout);
+  puts(zlibVersion());
   puts(OPENSSL_VERSION_TEXT);
   program_context p_ctx = {0};
   int ssl_sockfd, unsecured_sockfd;

@@ -225,7 +225,6 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
 
   bytes_read = block_limit_read(node->cSSL, 800, buffer, 2047);
   buffer[bytes_read] = 0;
-
   //couldn't read data
   if(bytes_read <= 0){
     fputs(SSL_ERROR_PREPEND"couldn't read() from client socket", stderr);
@@ -240,7 +239,6 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
     printf("%s malformed query sent. length: %d\n", WARNING_PREPEND, bytes_read);
     return 0;
   }
-
   ip_str = long_to_ipstr(node->peer_addr->sin_addr.s_addr);
   //everything has gone right
   printf("[%s-%d-%d/%d] method: %s | path: %s | host: %s | connection: %s\n",

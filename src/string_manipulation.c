@@ -120,26 +120,29 @@ int parse_http_request(http_request *req, char* data){
   char *token = strtok(data, "\r\n");
   size_t token_length;
   if(token == NULL || *token == 0)
-    return 1;
+    return -1;
   token_length = strlen(token);
   //first line is different
   if(parse_first_line(req, token) != 0){
     free_http_request(req);
-    return 1;
+    return -1;
   }
   //rest of the lines are normal
   //make sure there is actually data after the end of our first token
   if(token_length+2 > data_len){
     free_http_request(req);
-    return 1;
+    return -1;
   }
   token = strtok(token+token_length+2, "\r\n");
   //this weird token+strlen math is to go to the next token of the original call to strtok in this function. parse_first_line makes a call to strtok on the substring passed to it and erasing its data of the first call, so we artificially add it back by passing the (untouched) rest of the string data.
   while(token != NULL){
-    if(strncmp(token, "Host", 4)==0){
+    //this string pattern matching has to be replaced with something better than this jesus christ
+    if((*token == 'h' || *token == 'H')
+       && strncmp(token+1, "ost", 3)==0){
       req->host = malloc(strlen((token+6))+1);
       strcpy(req->host, (token+6));
-    }else if(strncmp(token, "Connection", 10)==0){
+    }else if((*token == 'c' || *token == 'C')
+             && strncmp(token+1, "onnection", 9)==0){
       if(strncmp(token+12, "keep-alive", 10)==0)
         req->connection = CONNECTION_KEEP_ALIVE;
       else

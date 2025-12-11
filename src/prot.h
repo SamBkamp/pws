@@ -1,34 +1,31 @@
 #ifndef MAIN_PROT
 #define MAIN_PROT
 
+//prot = short for prototype. for struct prototypes and clearly some other defines
+
 #include <poll.h>
 #include <openssl/ssl.h>
+
+#include "tweakables.h"
 
 #define VERSION_NUMBER "PWS 1.0.0-beta"
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443
-#define CLIENTS_MAX 10
-#define QUEUE_LEN 10
-#define POLL_TIMEOUT 50
-#define SOCKET_HTTP 0
+#define SOCKET_HTTP 0 //these two are for the pollfd array
 #define SOCKET_HTTPS 1
-
-#define HTTP_REQ_OBJ_METHOD_SIZE 10
 
 #define CONNECTION_CLOSE 0
 #define CONNECTION_KEEP_ALIVE 1
 
-#define KEEP_ALIVE_MAX_REQ 4
-#define KEEP_ALIVE_TIMEOUT 20 //in seconds
+//content-encoding macros
+#define CE_DEFLATE 0
+#define CE_GZIP 1
 
 #define SSL_ERROR_PREPEND "\x1B[1;31m[SSL_ERROR]\x1B[0m "
 #define ERROR_PREPEND "\x1B[1;31m[ERROR]\x1B[0m "
 #define WARNING_PREPEND "\x1B[1;33m[WARN]\x1B[0m "
 #define INFO_PREPEND "\x1B[1;36m[INFO]\x1B[0m "
-
-#define LOG_FILE "pws.log"
-#define ERROR_FILE "pws_error.log"
 
 typedef struct{
   char *private_key_path;
@@ -82,6 +79,9 @@ typedef struct{
   char *mimetype;
   char *data;
   long length;
+  char *compressed_data;
+  long compressed_length;
+  uint8_t compression_type; //for future expansion, not used currently
 }loaded_file;
 
 typedef struct {

@@ -82,8 +82,6 @@ loaded_file *get_file_data(char* path){
   if(file_data == MAP_FAILED)
     return (loaded_file *)-1;
 
-  loaded_file *new_load = found_file;
-
   //if file found by while loop returns a non-empty loaded_file, we exhausted the cache and must wrap around
   if(found_file->file_path != NULL){
     fputs(WARNING_PREPEND"File cache full, wrap around\n", stderr);
@@ -92,24 +90,24 @@ loaded_file *get_file_data(char* path){
     }
     free(files[0].file_path);
     munmap(files[0].data, files[0].length);
-    new_load = &files[0];
+    found_file = &files[0];
   }
 
 
-  new_load->length = file_length;
-  new_load->data = file_data;
+  found_file->length = file_length;
+  found_file->data = file_data;
 
   //can I store file name data in mmap region? ie say the file is only 3kb large, I still have another 1kb of unused page. Can I store metadata there?
-  new_load->file_path = malloc(strlen(path)+1);
-  strcpy(new_load->file_path, path);
+  found_file->file_path = malloc(strlen(path)+1);
+  strcpy(found_file->file_path, path);
   char *file_type = get_file_type(path);
   mime_type_t *type;
   for(type = mime_types; type->ext != NULL; type++){
     if(strcmp(type->ext, file_type) == 0)
       break;
   }
-  new_load->mimetype = type->mime;
-  return new_load;
+  found_file->mimetype = type->mime;
+  return found_file;
 }
 
 

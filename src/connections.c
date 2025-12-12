@@ -216,44 +216,55 @@ size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
 int send_http_response(ll_node* connection, http_response *res){
   char *buffer = malloc(res->content_length + 1024);
   size_t bytes_printed;
-
-
-  //headers
+  int bytes_written;
   bytes_printed = construct_headers(res, buffer, res->content_length+1024);
-  //body
-  memcpy(buffer+bytes_printed, res->body, res->content_length);
-  bytes_printed+=res->content_length;
-  *(buffer+bytes_printed) = '\r';
-  bytes_printed++;
-  *(buffer+bytes_printed) = '\n';
-  bytes_printed++;
-  *(buffer+bytes_printed) = 0;
 
-  int bytes;
   if(connection->cSSL != NULL){
+    uint32_t retries = 2000; //random ass choice. Will max at 10k uS
     //returns >0 OK. 0<= ERR
-    bytes = block_limit_write(connection->cSSL, 800, buffer, bytes_printed);
-    if(bytes <= 0){
+    //write headers
+    bytes_written = block_limit_write(connection->cSSL, retries, buffer, bytes_printed);
+    if(bytes_written <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
-      print_SSL_errstr(bytes, stderr);
+      print_SSL_errstr(bytes_written, stderr);
+      return -1;
+    }
+    //write body
+    bytes_written += block_limit_write(connection->cSSL, retries, res->body, res->content_length);
+    if(bytes_written <= 0){
+      fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
+      print_SSL_errstr(bytes_written, stderr);
     }
   }else{
     // returns n-bytes OK, < 0 ERR
     unsigned int idx = 0, max_retries = 2000;
-    bytes = write(connection->fd, buffer, bytes_printed);
-    if(bytes<0
+    bytes_written = write(connection->fd, buffer, bytes_printed);
+    if(bytes_written<0
        && (errno == EAGAIN || errno == EWOULDBLOCK)
        && idx < max_retries){
       idx++;
-      bytes = write(connection->fd, buffer, bytes_printed);
+      bytes_written = write(connection->fd, buffer, bytes_printed);
    }
-    if(bytes < 0)
+    if(bytes_written < 0){
       perror(ERROR_PREPEND"couldn't write()");
+      return -1;
+    }
+    //write body
+    bytes_written += write(connection->fd, res->body, res->content_length);
+    if(bytes_written<0
+       && (errno == EAGAIN || errno == EWOULDBLOCK)
+       && idx < max_retries){
+      idx++;
+      bytes_written = write(connection->fd, buffer, bytes_printed);
+    }
+    if(bytes_written < 0){
+      perror(ERROR_PREPEND"couldn't write()");
+      return -1;
+    }
   }
-
-  if(bytes != (int)bytes_printed)
+  if(bytes_written != (int)bytes_printed + (int)res->content_length)
     printf("%s ITS ALL FRIED, INCOMPLETE WRITE\n", ERROR_PREPEND);
-  return bytes;
+  return bytes_written;
 }
 
 //handler function to accept new SSL connections and append them to the Lnked List

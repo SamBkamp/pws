@@ -23,6 +23,7 @@
 #include "file_io.h"
 #include "string_manipulation.h"
 #include "connections.h"
+#include "pws.h"
 
 //I reckon this implementation might be temporary
 #define MAX_OPEN_FILES 20
@@ -101,8 +102,7 @@ loaded_file *get_file_data(char* path){
     return found_file;
 
   //cache miss
-  long file_length = sb.st_size; //stop re-lookup of file info
-  char *file_data  = open_file(path, &file_length);
+  char *file_data  = open_file(path, &(sb.st_size));
   //either not found or other mapping/IO failure
   //TODO: let errno propagate explicitly
   if(file_data == MAP_FAILED)
@@ -122,7 +122,7 @@ loaded_file *get_file_data(char* path){
   }
 
 
-  found_file->length = file_length;
+  found_file->length = sb.st_size;
   found_file->data = file_data;
 
   //can I store file name data in mmap region? ie say the file is only 3kb large, I still have another 1kb of unused page. Can I store metadata there?

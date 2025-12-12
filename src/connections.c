@@ -76,8 +76,7 @@ void destroy_node(ll_node *node){
   char ignore[1024];
   int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
   switch(ssl_shutdown_retval){
-  case 0:
-    //still needs to read from socket to complete bilateral shutdown
+  case 0: //still needs to read from socket to complete bilateral shutdown
     fputs(INFO_PREPEND"shutdown not yet finished, reading from socket\n", stderr);
     uint32_t timeout = 300;
     int read_res = block_limit_read(node->cSSL, timeout, ignore, 1024);    //blocks while reading from ssl socket
@@ -95,9 +94,9 @@ void destroy_node(ll_node *node){
     print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
   }
 
-  SSL_free(node->cSSL);
-  if(shutdown(node->fd, SHUT_RDWR)<0) perror(WARNING_PREPEND"couldn't shuttdown()");
   if(close(node->fd)<0) perror(WARNING_PREPEND"couldn't close()");
+  SSL_free(node->cSSL);
+  free(node->peer_addr);
   free(node);
 }
 

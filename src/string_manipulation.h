@@ -12,4 +12,6 @@ char *get_file_type(char* path);
 void print_SSL_errstr(int SSL_err, FILE* stream);
 char *open_file(char *path, long *bytes);
 char *generate_error(size_t code, size_t *len);
+int load_map();
+int query_map(char *path);
 #endif

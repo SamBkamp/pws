@@ -19,6 +19,47 @@
 #include "file_io.h"
 #include "connections.h"
 
+#define HASH_MAP_SIZE 32
+char *map[HASH_MAP_SIZE] = {NULL};
+const size_t tokens_len = 7;
+char *tokens[] = {"/wp_access",
+                  "/.env",
+                  "/.env/",
+                  "/admin.php",
+                  "/.git",
+                  "/htaccess",
+                  "/freakazoid"};
+
+uint8_t calculate_hash(const char* str){
+  uint16_t temp_hash = 0;
+  size_t len = strlen(str);
+  for(size_t i = 0; i < len; i++){
+    temp_hash += (str[i]^len); //literally just vibes
+  }
+  return temp_hash & (HASH_MAP_SIZE-1);
+}
+
+int load_map(){
+  for(size_t i = 0; i < tokens_len; i++){
+    uint16_t loc = calculate_hash(tokens[i]);
+    if(map[loc] == NULL){
+      map[loc] = tokens[i];
+    }else{
+      return -1;
+    }
+  }
+  return 0;
+}
+
+int query_map(char *path){
+
+  if(map[calculate_hash(path)] == NULL)
+    return -1;
+  return 0;
+}
+
+
+
 //function that sanitises and turns the http path into a file path on the system
 //retpath should be strlen(document_root) + strlen(path) + 20
 //returns ret_path (which contains the sanitised path) if valid path or returns NULL if fatally invalid
@@ -193,7 +234,7 @@ char *generate_error(size_t code, size_t *len){
                   msd[response_hi_num-1][response_lo_num],
                   code,
                   msd[response_hi_num-1][response_lo_num]);
-  
+
   char *retval = malloc(*len);
   strncpy(retval, buffer, *len);
   return retval;

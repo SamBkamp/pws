@@ -28,6 +28,12 @@
 //I reckon this implementation might be temporary
 #define MAX_OPEN_FILES 20
 
+//this has to be done differently...
+#define HOST_BLACKLIST_MAX 10
+loaded_file *files;
+unsigned long host_blacklist[HOST_BLACKLIST_MAX];
+uint8_t blacklist_idx = 0;
+
 static mime_type_t mime_types[] = {
     {"html", "text/html; charset=utf-8"},
     {"htm",  "text/html; charset=utf-8"},
@@ -47,9 +53,6 @@ static mime_type_t mime_types[] = {
     {"wasm", "application/wasm"},
     {NULL,   "application/octet-stream"}  // default + sentinel
 };
-
-
-loaded_file *files;
 
 //dumps buffered stdout to stdout
 //i think this is threadsafe
@@ -170,6 +173,15 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     res->location = cfg->hostname;
   }
 
+  if(query_map(req->path)==0){
+    unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
+    char *ipstr = long_to_ipstr(ip);
+    printf(INFO_PREPEND"found %s in hashmap. IP: %ld (%s)\n", req->path, ip, ipstr);
+    free(ipstr);
+    host_blacklist[blacklist_idx++] = ip;
+  }
+
+
   //sanitize path
   if(format_dirs(req->path, file_path, file_path_size, cfg->document_root) == NULL)
     res->response_code = 403;
@@ -270,6 +282,10 @@ int pws(){
   };
   ll_node *tail = &head;
 
+  if(load_map()<0){
+    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
+    return 1;
+  }
   //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
   signal(SIGPIPE, SIG_IGN);
 
@@ -342,7 +358,7 @@ int pws(){
     //check for and then set up new connections
     if(p_ctx.clients_connected < CLIENTS_MAX
        && (p_ctx.listener_sockets[SOCKET_HTTPS].revents & POLLIN) > 0
-       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected]) != NULL)
+       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected], host_blacklist, blacklist_idx) != NULL)
       ++p_ctx.clients_connected;
 
     //reached client connected max

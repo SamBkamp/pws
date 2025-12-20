@@ -77,6 +77,7 @@ void destroy_node(ll_node *node){
   int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
   switch(ssl_shutdown_retval){
   case 0: //still needs to read from socket to complete bilateral shutdown
+    ;
     uint32_t timeout = 300;
     int read_res = block_limit_read(node->cSSL, timeout, ignore, 1024);    //blocks while reading from ssl socket
     int ssl_error_code = SSL_get_error(node->cSSL, read_res);
@@ -268,7 +269,7 @@ int send_http_response(ll_node* connection, http_response *res){
 //handler function to accept new SSL connections and append them to the Lnked List
 //returns 1 for new connection 0 for no new connection (so you can add it to a total)
 //should the arguments be coalesced into a smaller list?
-ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, struct pollfd *pfd){
+ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, struct pollfd *pfd, unsigned long *blacklist, uint8_t blacklist_idx){
   ll_node *node = malloc(sizeof(ll_node));
   int ssl_err;
   uint32_t timeout = 2000;
@@ -280,6 +281,15 @@ ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, st
     perror(ERROR_PREPEND"accept");
     return NULL;
   }
+  //check if IP is on blacklist
+  for(uint8_t i = 0; i < blacklist_idx; i++){
+    if(blacklist[i]==node->peer_addr->sin_addr.s_addr){
+      fputs(ERROR_PREPEND"blocked ip rejected\n", stderr);
+      close(node->fd);
+      return NULL;
+    }
+  }
+
   node->cSSL = SSL_new(sslctx);
   SSL_set_fd(node->cSSL, node->fd);
 

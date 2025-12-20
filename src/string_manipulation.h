@@ -3,6 +3,8 @@
 #define PWS_STRING_MANIPULATION
 #include <poll.h>
 #include <stdint.h>
+#include "prot.h"
+#define HASH_MAP_SIZE 32
 char *format_dirs(char *path, char *ret_path, size_t ret_path_size,char *document_root);
 int parse_first_line(http_request *req, char* first_line);
 int parse_http_request(http_request *req, char* data);
@@ -14,4 +16,5 @@ char *open_file(char *path, long *bytes);
 char *generate_error(size_t code, size_t *len);
 int load_map();
 int query_map(char *path);
+uint8_t calculate_hash(const char* str);
 #endif

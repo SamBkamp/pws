@@ -3,6 +3,7 @@
 
 //prot = short for prototype. for struct prototypes and clearly some other defines
 
+#include <sys/socket.h>
 #include <poll.h>
 #include <openssl/ssl.h>
 

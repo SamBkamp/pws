@@ -19,7 +19,6 @@
 #include "file_io.h"
 #include "connections.h"
 
-#define HASH_MAP_SIZE 32
 char *map[HASH_MAP_SIZE] = {NULL};
 const size_t tokens_len = 7;
 char *tokens[] = {"/wp_access",

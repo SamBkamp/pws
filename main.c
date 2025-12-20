@@ -37,13 +37,14 @@ void fork_worker(const char *path){
   freopen(LOG_FILE, "w", stdout);
   freopen(ERROR_FILE, "w", stderr);
 
+  //tell parent we no longer need the tty open
+  kill(parent, SIGINT);
+
   //make sure buffer is flushed when signal arrives
   signal(SIGINT, sig_handler);
   signal(SIGABRT, sig_handler);
   signal(SIGTERM, sig_handler);
   signal(SIGSEGV, sig_handler);
-
-  kill(parent, SIGINT);
 
   //all done! ready to work
   puts("daemonization successful");

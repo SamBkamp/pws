@@ -16,6 +16,7 @@ void sig_handler(int sig){
 }
 
 void fork_worker(const char *path){
+  pid_t parent = getppid();
   //create new session and become session leader (with no tty)
   setsid();
   //if we wanted to, we could fork again here to make sure we don't reaquire a tty
@@ -29,6 +30,7 @@ void fork_worker(const char *path){
 
   umask(000);
 
+
   fclose(stdin);
   fclose(stdout);
   fclose(stderr);
@@ -41,11 +43,14 @@ void fork_worker(const char *path){
   signal(SIGTERM, sig_handler);
   signal(SIGSEGV, sig_handler);
 
+  kill(parent, SIGINT);
 
   //all done! ready to work
   puts("daemonization successful");
   pws();
 }
+
+
 
 
 int main(int argc, char *argv[]){
@@ -73,8 +78,9 @@ int main(int argc, char *argv[]){
       fork_worker(cwd);
       break;
     default:
-      sleep(1); //<- hold terminal open so child can print to stderr if init fails
       printf("child started: [%d]\n", f_res);
+      signal(SIGINT, sig_handler); // <- so parent can quit and doesn't have to wait the full second if child starts up earlier
+      sleep(1); //<- hold terminal open so child can print to stderr if init fails
       break;
     }
   }

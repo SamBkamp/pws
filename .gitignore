@@ -6,3 +6,4 @@ config.h
 data/**
 **.log
 config.pws
+tests/tests

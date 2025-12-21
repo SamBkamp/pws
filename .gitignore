@@ -7,4 +7,4 @@ data/**
 **.log
 config.pws
 tests/tests
-test/hash_distribution
+tests/hash_distribution

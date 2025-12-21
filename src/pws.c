@@ -268,20 +268,11 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
   return req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
 }
 
-
-int pws(){
+int init(program_context *p_ctx, SSL_CTX **sslctx){
   puts(VERSION_NUMBER);
   fputs("zlib ", stdout);
   puts(zlibVersion());
   puts(OPENSSL_VERSION_TEXT);
-  program_context p_ctx = {0};
-  int ssl_sockfd, unsecured_sockfd;
-  ll_node head = {
-    .fd = 0,
-    .next = NULL
-  };
-  ll_node *tail = &head;
-
   if(load_map()<0){
     fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
     return 1;
@@ -289,11 +280,10 @@ int pws(){
   //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
   signal(SIGPIPE, SIG_IGN);
 
-  if(load_config(&p_ctx.cfg)<0){
+  if(load_config(&p_ctx->cfg)<0){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
   }
-
   signal(SIGUSR1, dump_logs);
 
   files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
@@ -301,18 +291,17 @@ int pws(){
     files[i].file_path = NULL;
     files[i].data = NULL;
   }
-
   //load openSSL nonsense (algos and strings)
   OpenSSL_add_all_algorithms();  //surely this can be changed to load just the ones we want?
   SSL_load_error_strings();
   SSL_library_init();
 
   //set up SSL context for all connections
-  SSL_CTX *sslctx = SSL_CTX_new(TLS_server_method()); //create new ssl context
-  SSL_CTX_set_options(sslctx, SSL_OP_SINGLE_DH_USE); //using single diffie helman, I guess?
-  int use_cert = SSL_CTX_use_certificate_file(sslctx, p_ctx.cfg.certificate_path, SSL_FILETYPE_PEM);
-  int use_prv_key = SSL_CTX_use_PrivateKey_file(sslctx, p_ctx.cfg.private_key_path, SSL_FILETYPE_PEM);
-  int use_chain = SSL_CTX_use_certificate_chain_file(sslctx, p_ctx.cfg.fullchain_path);
+  *sslctx = SSL_CTX_new(TLS_server_method()); //create new ssl context
+  SSL_CTX_set_options(*sslctx, SSL_OP_SINGLE_DH_USE); //using single diffie helman, I guess?
+  int use_cert = SSL_CTX_use_certificate_file(*sslctx, p_ctx->cfg.certificate_path, SSL_FILETYPE_PEM);
+  int use_prv_key = SSL_CTX_use_PrivateKey_file(*sslctx, p_ctx->cfg.private_key_path, SSL_FILETYPE_PEM);
+  int use_chain = SSL_CTX_use_certificate_chain_file(*sslctx, p_ctx->cfg.fullchain_path);
 
   if(use_cert != 1 || use_prv_key != 1){
     fputs(SSL_ERROR_PREPEND"could not load certificate or private key\n", stderr);
@@ -321,6 +310,24 @@ int pws(){
 
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
+
+  return 0;
+}
+
+
+int pws(){
+  program_context p_ctx = {0};
+  int ssl_sockfd, unsecured_sockfd;
+  ll_node head = {
+    .fd = 0,
+    .next = NULL
+  };
+  ll_node *tail = &head;
+  SSL_CTX *sslctx = NULL;
+
+  if(init(&p_ctx, &sslctx)!=0)
+    return EXIT_FAILURE;
+
 
   //opens socket, binds to address and sets socket to listening
   if(open_connection(&ssl_sockfd, HTTPS_PORT) != 0){

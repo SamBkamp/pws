@@ -4,6 +4,8 @@
 #include "test_literals.h"
 #include "../src/string_manipulation.h"
 
+#define HASH_DISTRO_SIZE 1000
+
 char **msd = {NULL}; //hack bc my code has too many globals pls help me
 
 const size_t test_tokens_len = 7;
@@ -57,7 +59,6 @@ int lowercase_test(){
   return pass;
 }
 
-
 int main(int argc, char* argv[]){
   unsigned int passes = 0, failures = 0;
   if(hash_map_test()==0)
@@ -68,7 +69,7 @@ int main(int argc, char* argv[]){
     passes++;
   else
     failures++;
-
+  
   //pre-proccessor crime
   printf(CLEAR""INFO_BLUE_BOLD"\n\t[TEST RESULTS]\n"SUCCESS_GREEN"passes: %d\n"FAILURE_RED"failures: %d\n", passes, failures);
 

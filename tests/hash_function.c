@@ -29,8 +29,34 @@ int hash_map_test(){
     }
   }
   fputs(pass == 0 ? SUCCESS_GREEN_BOLD"test passed!\n" : FAILURE_RED_BOLD"test failed!\n", stdout);
+  fputs(CLEAR, stdout);
   return pass;
 }
+
+int lowercase_test(){
+  fputs(INFO_YELLOW"running uppercasing test\n"CLEAR, stdout);
+  int pass = 0;
+  int strings_to_test = 3;
+  //this nonsense has to happen so it doesn't get put in the .rodata section of the binary and we can actually edit it in place
+  char s1[] = "Test";
+  char s2[] = "T-esT";
+  char s3[] = "test";
+  char t1[] = "TEST";
+  char t2[] = "T-EST";
+  char t3[] = "TEST";
+
+  char *source[] = {s1, s2, s3};
+  char *target[] = {t1, t2, t3};
+
+  for(int i = 0; i < strings_to_test; i++){
+    if(strcmp(all_to_upper(source[i]), target[i])!=0)
+      pass++;
+  }
+  fputs(pass == 0 ? SUCCESS_GREEN_BOLD"test passed!\n" : FAILURE_RED_BOLD"test failed!\n", stdout);
+  fputs(CLEAR, stdout);
+  return pass;
+}
+
 
 int main(int argc, char* argv[]){
   unsigned int passes = 0, failures = 0;
@@ -38,7 +64,12 @@ int main(int argc, char* argv[]){
     passes++;
   else
     failures++;
+  if(lowercase_test()==0)
+    passes++;
+  else
+    failures++;
 
-  printf(CLEAR""INFO_BLUE_BOLD"\n\n\t[TEST RESULTS]\n"SUCCESS_GREEN"passes: %d\n"FAILURE_RED"failures: %d\n", passes, failures);
-  
+  //pre-proccessor crime
+  printf(CLEAR""INFO_BLUE_BOLD"\n\t[TEST RESULTS]\n"SUCCESS_GREEN"passes: %d\n"FAILURE_RED"failures: %d\n", passes, failures);
+
 }

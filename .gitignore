@@ -8,3 +8,4 @@ data/**
 config.pws
 tests/tests
 tests/hash_distribution
+honey.cfg

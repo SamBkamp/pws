@@ -103,3 +103,38 @@ int load_config(config *cfg){
   }
   return 0;
 }
+
+//loads the honey pot file
+//returns an array of char * with final entry being a null pointer
+//current is a 2-copy operation. One to load file into stack another to load into heap memory. Probably not a huge issue as this only runs once on startup but there is room for improvement
+char **load_honey(char *path){
+  const uint16_t entries_max = 1024;
+  uint16_t entries = 0;
+  char *honey_paths[entries_max];
+  char buffer[1024];
+  char **ret_path_array;
+  int bytes_read, conf_fd = open(path, O_RDONLY);
+  if(conf_fd<0) return NULL;
+
+  bytes_read = read(conf_fd, buffer, 1023);
+  if(bytes_read < 0) return NULL;
+
+  //parse each line
+  buffer[bytes_read] = 0;
+  char *line = strtok(buffer, "\n");
+  while(line){
+    honey_paths[entries++] = line;
+    line = strtok(NULL,  "\n");
+  }
+
+  //load each line (entry) into heap
+  ret_path_array = malloc(sizeof(char *)*(entries+1));
+
+  for(int i = 0; i < entries; i++){
+    ret_path_array[i] = malloc(strlen(honey_paths[i])+1);
+    strcpy(ret_path_array[i], honey_paths[i]);
+  }
+
+  ret_path_array[entries] = NULL;
+  return ret_path_array;
+}

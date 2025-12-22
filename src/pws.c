@@ -273,10 +273,7 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   fputs("zlib ", stdout);
   puts(zlibVersion());
   puts(OPENSSL_VERSION_TEXT);
-  if(load_map()<0){
-    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
-    return 1;
-  }
+
   //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
   signal(SIGPIPE, SIG_IGN);
 
@@ -311,6 +308,14 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
 
+  char **honey_pot = load_honey("honey.cfg");
+  if(!honey_pot)
+    fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
+
+  if(load_map(honey_pot)<0){
+    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderry);
+    return 1;
+  }
   return 0;
 }
 

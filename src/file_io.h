@@ -5,5 +5,6 @@
 
 char *open_file(char *path, long *bytes);
 int load_config(config *cfg);
+char **load_honey(char *path);
 
 #endif

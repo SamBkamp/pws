@@ -20,14 +20,6 @@
 #include "connections.h"
 
 char *map[HASH_MAP_SIZE] = {NULL};
-const size_t tokens_len = 7;
-char *tokens[] = {"/wp_access",
-                  "/.env",
-                  "/.env/",
-                  "/admin.php",
-                  "/.git",
-                  "/htaccess",
-                  "/freakazoid"};
 
 uint8_t calculate_hash(const char* str){
   uint16_t temp_hash = 0;
@@ -38,14 +30,17 @@ uint8_t calculate_hash(const char* str){
   return temp_hash & (HASH_MAP_SIZE-1);
 }
 
-int load_map(){
-  for(size_t i = 0; i < tokens_len; i++){
-    uint16_t loc = calculate_hash(tokens[i]);
+int load_map(char **token_list){
+  uint16_t idx = 0;
+  char *current_token = token_list[idx];
+  while(current_token){
+    uint16_t loc = calculate_hash(current_token);
     if(map[loc] == NULL){
-      map[loc] = tokens[i];
+      map[loc] = current_token;
     }else{
       return -1;
     }
+    current_token = token_list[++idx];
   }
   return 0;
 }

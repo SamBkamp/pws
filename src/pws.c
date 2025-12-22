@@ -175,10 +175,10 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
   if(query_map(req->path)==0){
     unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
-    char *ipstr = long_to_ipstr(ip);
-    printf(INFO_PREPEND"found %s in hashmap. IP: %ld (%s)\n", req->path, ip, ipstr);
-    free(ipstr);
     host_blacklist[blacklist_idx++] = ip;
+    res->response_code = 403;
+    res->connection = CONNECTION_CLOSE;
+    return -1;
   }
 
 

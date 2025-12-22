@@ -34,7 +34,7 @@ int load_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];
   while(current_token){
-    uint16_t loc = calculate_hash(current_token);
+    uint16_t loc = calculate_hash(all_to_lower(current_token));
     if(map[loc] == NULL){
       map[loc] = current_token;
     }else{

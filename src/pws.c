@@ -173,7 +173,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     res->location = cfg->hostname;
   }
 
-  if(query_map(req->path)==0){
+  if(query_map(all_to_lower(req->path))==0){
     unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
     host_blacklist[blacklist_idx++] = ip;
     res->response_code = 403;

@@ -18,4 +18,5 @@ int load_map();
 int query_map(char *path);
 uint8_t calculate_hash(const char* str);
 char *all_to_upper(char *str);
+char *all_to_lower(char *str);
 #endif

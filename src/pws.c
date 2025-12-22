@@ -313,7 +313,7 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
     fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
 
   if(load_map(honey_pot)<0){
-    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderry);
+    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
     return 1;
   }
   return 0;

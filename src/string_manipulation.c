@@ -55,10 +55,19 @@ int query_map(char *path){
 
 //takes a string and turns all characters into lowercase. Destructive. ONLY FOR ASCII
 char *all_to_upper(char *str){
-  const uint8_t mask = ~(1<<5); // 0b01111111
+  const uint8_t mask = ~(1<<5); // 0b001111111
   for(size_t i = 0; i < strlen(str); i++){
     if(str[i] > 0x40 && str[i] < 0x7a)
       str[i] &= mask;
+  }
+  return str;
+}
+
+char *all_to_lower(char *str){
+  const uint8_t mask = (1<<5); // 0b00100000
+  for(size_t i = 0; i < strlen(str); i++){
+    if(str[i] > 0x40 && str[i] < 0x7a)
+      str[i] |= mask;
   }
   return str;
 }
@@ -181,10 +190,10 @@ int parse_http_request(http_request *req, char* data){
   token = strtok(token+token_length+2, "\r\n");
   //this weird token+strlen math is to go to the next token of the original call to strtok in this function. parse_first_line makes a call to strtok on the substring passed to it and erasing its data of the first call, so we artificially add it back by passing the (untouched) rest of the string data.
   while(token != NULL){
-    if(strncmp(all_to_upper(token), "HOST", 3)==0){
+    if(strncmp(all_to_lower(token), "host", 3)==0){
       req->host = malloc(strlen((token+6))+1);
       strcpy(req->host, (token+6));
-    }else if(strncmp(all_to_upper(token), "CONNECTION", 9)==0){
+    }else if(strncmp(all_to_lower(token), "connection", 9)==0){
       if(strncmp(token+12, "keep-alive", 10)==0)
         req->connection = CONNECTION_KEEP_ALIVE;
       else

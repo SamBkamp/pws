@@ -9,7 +9,7 @@
 
 #include "tweakables.h"
 
-#define VERSION_NUMBER "PWS 1.1.3-beta"
+#define VERSION_NUMBER "PWS 1.2.0-beta"
 
 #define HTTP_PORT 80
 #define HTTPS_PORT 443

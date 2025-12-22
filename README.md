@@ -29,6 +29,17 @@ When running PWS as a daemon, stdout and stderr will be rerouted to pws.log and 
 ### optional fields (can be left blank):
 - C_FULLCHAIN_FILE
 
+## blacklisted urls (honeypots)
+*honey.cfg* will be read and loaded on startup. This file contains blacklisted paths that when requested by a client, will close the connection and their IP will be added to a blacklist. If a client connects and their IP is on the blacklist, this connection will be closed before the client can send any requests. This is to prevent scraper bots and malicious actors who try to attack the site by request well-known pages (admin.php, .env, etc). The blacklist is stored in memory only, so any restart clears the blacklist. The blacklist parser does not support wildcard or regex entries yet, only direct matches. Preface your entries with a leading /. Example:
+```
+/wp_access
+/.env
+/.env/
+/admin.php
+/.git
+/htaccess
+```
+ther parser is case insensitive. `/.Env` will match `/.env` and vice versa.
 
 ## dependencies
 pws depends on libcrypto, OpenSSL and zlib. These are most likely already on your system, but in the case they aren't, you can install them with:

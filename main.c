@@ -38,7 +38,7 @@ void fork_worker(const char *path){
   freopen(ERROR_FILE, "w", stderr);
 
   //tell parent we no longer need the tty open
-  kill(parent, SIGINT);
+  kill(parent, SIGCONT);
 
   //make sure buffer is flushed when signal arrives
   signal(SIGINT, sig_handler);
@@ -52,7 +52,9 @@ void fork_worker(const char *path){
 }
 
 
-
+void lame_ass_sig_handler(){ //this exists purely so pause() can return
+  return;
+}
 
 int main(int argc, char *argv[]){
   prog_opts opts = {0};
@@ -79,9 +81,9 @@ int main(int argc, char *argv[]){
       fork_worker(cwd);
       break;
     default:
+      signal(SIGCONT, lame_ass_sig_handler); //man this feels so stupid
+      pause();
       printf("child started: [%d]\n", f_res);
-      signal(SIGINT, sig_handler); // <- so parent can quit and doesn't have to wait the full second if child starts up earlier
-      sleep(1); //<- hold terminal open so child can print to stderr if init fails
       break;
     }
   }

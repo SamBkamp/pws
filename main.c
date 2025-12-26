@@ -12,6 +12,26 @@
 
 //make sure our output buffers get flushed
 void sig_handler(int sig){
+  switch(sig){
+  case SIGINT:
+    write(fileno(stderr), ERROR_PREPEND"RECEIVED SIGINT\n", sizeof(ERROR_PREPEND"RECEIVED SIGINT\n"));
+    break;
+  case SIGABRT:
+    write(fileno(stderr), ERROR_PREPEND"RECEIVED SIGABRT\n", sizeof(ERROR_PREPEND"RECEIVED SIGABRT\n"));
+    break;
+  case SIGTERM:
+    write(fileno(stderr), ERROR_PREPEND"RECEIVED SIGTERM\n", sizeof(ERROR_PREPEND"RECEIVED SIGTERM\n"));
+    break;
+  case SIGSEGV:
+    write(fileno(stderr), ERROR_PREPEND"RECEIVED SIGSEGV\n", sizeof(ERROR_PREPEND"RECEIVED SIGSEGV\n"));
+    break;
+  default:
+    ;
+    char error_number = sig+0x30;
+    write(fileno(stderr), ERROR_PREPEND"RECEIVED UNKNOWN SIGNAL ", sizeof(ERROR_PREPEND"RECEIVED UNKNOWN SIGNAL "));
+    write(fileno(stderr), &error_number, sizeof(char));
+    break;
+  }
   exit(sig);
 }
 
@@ -40,11 +60,14 @@ void fork_worker(const char *path){
   //tell parent we no longer need the tty open
   kill(parent, SIGCONT);
 
-  //make sure buffer is flushed when signal arrives
   signal(SIGINT, sig_handler);
   signal(SIGABRT, sig_handler);
   signal(SIGTERM, sig_handler);
   signal(SIGSEGV, sig_handler);
+  signal(SIGTRAP, sig_handler);
+  signal(SIGHUP, sig_handler);
+  signal(SIGALRM, sig_handler);
+  signal(SIGSTOP, sig_handler);
 
   //all done! ready to work
   puts("daemonization successful");

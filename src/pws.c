@@ -178,7 +178,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     if(blacklist_idx < HOST_BLACKLIST_MAX)
       host_blacklist[blacklist_idx++] = ip;
     else
-      fputs(ERROR_PREPEND"host blacklist full");
+      fputs(ERROR_PREPEND"host blacklist full", stderr);
     res->response_code = 403;
     res->connection = CONNECTION_CLOSE;
     return -1;

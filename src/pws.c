@@ -284,6 +284,14 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
   }
+  if(!p_ctx->cfg.hostname){
+    fputs(ERROR_PREPEND"no hostname supplied\n", stderr);
+    return 1;
+  }
+  if(!p_ctx->cfg.document_root){
+    fputs(ERROR_PREPEND"no document root supplied\n", stderr);
+    return 1;
+  }
   signal(SIGUSR1, dump_logs);
 
   files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);

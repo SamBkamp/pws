@@ -30,7 +30,7 @@ uint8_t calculate_hash(const char* str){
   return temp_hash & (HASH_MAP_SIZE-1);
 }
 
-int load_map(char **token_list){
+int load_blacklink_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];
   while(current_token){

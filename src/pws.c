@@ -311,11 +311,11 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
 
-  char **honey_pot = load_honey("honey.cfg");
-  if(!honey_pot)
+  char **blacklinks = load_honey("blacklinks.cfg");
+  if(!blacklinks)
     fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
 
-  if(load_map(honey_pot)<0){
+  if(load_blacklink_map(blacklinks)<0){
     fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
     return 1;
   }

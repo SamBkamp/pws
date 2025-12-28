@@ -14,7 +14,7 @@ char *get_file_type(char* path);
 void print_SSL_errstr(int SSL_err, FILE* stream);
 char *open_file(char *path, long *bytes);
 char *generate_error(size_t code, size_t *len);
-int load_map();
+int load_blacklink_map(char **token_list);
 int query_map(char *path);
 uint8_t calculate_hash(const char* str);
 char *all_to_upper(char *str);

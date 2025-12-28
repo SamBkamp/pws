@@ -172,6 +172,7 @@ int parse_first_line(http_request *req, char* first_line){
   *path_letter = 0;
 
   req->path = malloc(strlen(line_token)+1); //chars are 1 byte (almost always)
+  if(!req->path) return -1;
   strcpy(req->path, line_token);
   return 0;
 }

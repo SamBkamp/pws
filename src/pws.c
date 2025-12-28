@@ -175,7 +175,10 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 
   if(query_map(all_to_lower(req->path))==0){
     unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
-    host_blacklist[blacklist_idx++] = ip;
+    if(blacklist_idx < HOST_BLACKLIST_MAX)
+      host_blacklist[blacklist_idx++] = ip;
+    else
+      fputs(ERROR_PREPEND"host blacklist full");
     res->response_code = 403;
     res->connection = CONNECTION_CLOSE;
     return -1;

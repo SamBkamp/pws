@@ -34,7 +34,7 @@ int load_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];
   while(current_token){
-    uint16_t loc = calculate_hash(all_to_lower(current_token));
+    uint16_t loc = calculate_hash(current_token);
     if(map[loc] == NULL){
       map[loc] = current_token;
     }else{
@@ -170,6 +170,7 @@ int parse_first_line(http_request *req, char* first_line){
 
 //parses the whole http request
 int parse_http_request(http_request *req, char* data){
+  all_to_lower(data); //this is "destructive"
   size_t data_len = strlen(data);
   char *token = strtok(data, "\r\n");
   size_t token_length;
@@ -190,10 +191,10 @@ int parse_http_request(http_request *req, char* data){
   token = strtok(token+token_length+2, "\r\n");
   //this weird token+strlen math is to go to the next token of the original call to strtok in this function. parse_first_line makes a call to strtok on the substring passed to it and erasing its data of the first call, so we artificially add it back by passing the (untouched) rest of the string data.
   while(token != NULL){
-    if(strncmp(all_to_lower(token), "host", 3)==0){
+    if(strncmp(token, "host", 3)==0){
       req->host = malloc(strlen((token+6))+1);
       strcpy(req->host, (token+6));
-    }else if(strncmp(all_to_lower(token), "connection", 9)==0){
+    }else if(strncmp(token, "connection", 9)==0){
       if(strncmp(token+12, "keep-alive", 10)==0)
         req->connection = CONNECTION_KEEP_ALIVE;
       else

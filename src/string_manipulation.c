@@ -156,6 +156,7 @@ void free_http_request(http_request *req){
 int parse_first_line(http_request *req, char* first_line){
   //method
   char *line_token = strtok(first_line, " ");
+  char *path_letter = NULL;
   if(line_token == NULL)
     return -1;
   strncpy(req->method, line_token, HTTP_REQ_OBJ_METHOD_SIZE-1);
@@ -163,6 +164,13 @@ int parse_first_line(http_request *req, char* first_line){
   line_token = strtok(NULL, " ");
   if(line_token == NULL)
     return -1;
+
+  //remove out get variables
+  path_letter = line_token;
+  while(*path_letter != '?' && *path_letter != 0)
+    path_letter++;
+  *path_letter = 0;
+
   req->path = malloc(strlen(line_token)+1); //chars are 1 byte (almost always)
   strcpy(req->path, line_token);
   return 0;

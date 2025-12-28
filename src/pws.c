@@ -314,10 +314,11 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   char **blacklinks = load_blacklinks("blacklinks.cfg");
   if(!blacklinks)
     fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
-
-  if(load_blacklink_map(blacklinks)<0){
-    fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
-    return 1;
+  else{
+    if(load_blacklink_map(blacklinks)<0){
+      fputs(ERROR_PREPEND"map couldn't load, most likely collision\n", stderr);
+      return 1;
+    }
   }
   return 0;
 }

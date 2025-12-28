@@ -5,6 +5,6 @@
 
 char *open_file(char *path, long *bytes);
 int load_config(config *cfg);
-char **load_honey(char *path);
+char **load_blacklinks(char *path);
 
 #endif

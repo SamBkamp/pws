@@ -311,7 +311,7 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
 
-  char **blacklinks = load_honey("blacklinks.cfg");
+  char **blacklinks = load_blacklinks("blacklinks.cfg");
   if(!blacklinks)
     fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
 

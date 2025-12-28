@@ -104,10 +104,10 @@ int load_config(config *cfg){
   return 0;
 }
 
-//loads the honey pot file
+//loads the blacklinks file
 //returns an array of char * with final entry being a null pointer
 //current is a 2-copy operation. One to load file into stack another to load into heap memory. Probably not a huge issue as this only runs once on startup but there is room for improvement
-char **load_honey(char *path){
+char **load_blacklinks(char *path){
   const uint16_t entries_max = 1024;
   uint16_t entries = 0;
   char *honey_paths[entries_max];

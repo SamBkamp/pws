@@ -1,6 +1,9 @@
 PRIVATE_KEY_FILE = "certs/priv.pem"
 CERTIFICATE_FILE = "certs/cert.pem"
 C_FULLCHAIN_FILE = 
-#this is a comment
 DOMAIN_HOST_NAME = "fish"
 DOCUMENT_ROOTDIR = "data"
+
+#advanced settings - these are all reasonable defaults and I suggest leaving
+#be unless you want to change something specific
+POLL_TIMEOUT = 100

@@ -94,6 +94,8 @@ int load_config(config *cfg){
       }else if(strcmp(tok, "DOCUMENT_ROOTDIR")==0){
         cfg->document_root = malloc(strlen(val));
         strcpy(cfg->document_root, val);
+      }else if(strcmp(tok, "POLL_TIMEOUT")==0){
+        cfg->poll_timeout = atoi(val);
       }else{
         printf("unknown directive %s\n", tok);
         return -1;

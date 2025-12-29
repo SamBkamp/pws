@@ -35,6 +35,7 @@ typedef struct{
   char *hostname;
   char *document_root;
   unsigned int hostname_len;
+  unsigned int poll_timeout;
 }config;
 
 typedef struct{

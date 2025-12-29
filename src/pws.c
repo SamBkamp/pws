@@ -289,6 +289,10 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
     fputs(ERROR_PREPEND"no document root supplied\n", stderr);
     return 1;
   }
+  if(p_ctx->cfg.poll_timeout == 0){
+    fputs(ERROR_PREPEND"no poll timeout supplied\n", stderr);
+    return 1;
+  }
   signal(SIGUSR1, dump_logs);
 
   //init map
@@ -368,7 +372,7 @@ int pws(){
 
   //main event loop
   while(1){
-    int ret_poll = poll(p_ctx.listener_sockets, 2, POLL_TIMEOUT);
+    int ret_poll = poll(p_ctx.listener_sockets, 2, p_ctx.cfg.poll_timeout);
 
     if(ret_poll == 0) //no new events
       goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
@@ -387,7 +391,7 @@ int pws(){
       fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
   handle_existing_connections:
-    ret_poll = poll(p_ctx.secured_sockets, p_ctx.clients_connected, POLL_TIMEOUT);
+    ret_poll = poll(p_ctx.secured_sockets, p_ctx.clients_connected, p_ctx.cfg.poll_timeout);
     if(ret_poll<0){
       perror(ERROR_PREPEND"poll failure");
       continue;

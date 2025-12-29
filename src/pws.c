@@ -25,12 +25,13 @@
 #include "connections.h"
 #include "pws.h"
 
-//I reckon this implementation might be temporary
-#define MAX_OPEN_FILES 20
+//file cache map
+#define MAX_OPEN_FILES 32
+loaded_file files_map[MAX_OPEN_FILES];
+uint32_t map_load = 0;
 
 //this has to be done differently...
 #define HOST_BLACKLIST_MAX 10
-loaded_file *files;
 unsigned long host_blacklist[HOST_BLACKLIST_MAX];
 uint8_t blacklist_idx = 0;
 
@@ -87,64 +88,60 @@ int compress_file_data(loaded_file *lf){
 
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
-  loaded_file *found_file = files;
   struct stat sb;
+
+  //search cache(map) for file
+  uint8_t map_idx = calculate_hash(path);
+  if(files_map[map_idx].file_path != NULL && strcmp(files_map[map_idx].file_path, path) == 0)
+    return &files_map[map_idx];
+
 
   //check if file even exists, quick return if no. not checking all errno bc regardless of what errno, this function cannot/should not continue
   if(stat(path, &sb) < 0)
     return (loaded_file *)-1;
 
-  while((found_file-files) < MAX_OPEN_FILES
-        && found_file->file_path != NULL
-        && strcmp(found_file->file_path, path)!=0)
-    found_file++;
-
-  //cached file hit
-  if((found_file-files) < MAX_OPEN_FILES
-     && found_file->file_path != NULL)
-    return found_file;
-
-  //cache miss
+  //cache miss - load the file and requisite information
   char *file_data  = open_file(path, &(sb.st_size));
+  uint8_t new_file_hash = calculate_hash(path);
+  loaded_file *new_file = &files_map[new_file_hash];
+
   //either not found or other mapping/IO failure
-  //TODO: let errno propagate explicitly
   if(file_data == MAP_FAILED)
     return (loaded_file *)-1;
 
-  //if file found by while loop returns a non-empty loaded_file, we exhausted the cache and must wrap around
-  if(found_file->file_path != NULL){
-    fputs(WARNING_PREPEND"File cache full, wrap around\n", stderr);
-    for(loaded_file *current_file = files; current_file->file_path != NULL && (current_file-files) < MAX_OPEN_FILES; current_file++){
-      printf("%s |", current_file->file_path);
-    }
-    free(files[0].file_path);
-    munmap(files[0].data, files[0].length);
-    if(files[0].compressed_data != NULL)
-      free(files[0].compressed_data);
-    found_file = &files[0];
+  //check if bucket is occupied
+  if(new_file->data != NULL){
+    fprintf(stdout, INFO_PREPEND"evicting %s from cache\n", new_file->file_path);
+    free(new_file->file_path);
+    munmap(new_file->data, new_file->length);
+    if(new_file->compressed_data != NULL) free(new_file->compressed_data);
   }
 
-
-  found_file->length = sb.st_size;
-  found_file->data = file_data;
+  new_file->length = sb.st_size;
+  new_file->data = file_data;
 
   //can I store file name data in mmap region? ie say the file is only 3kb large, I still have another 1kb of unused page. Can I store metadata there?
-  found_file->file_path = malloc(strlen(path)+1);
-  strcpy(found_file->file_path, path);
+  //store file path
+  new_file->file_path = malloc(strlen(path)+1);
+  strcpy(new_file->file_path, path);
+
+  //get and store mime type
   char *file_type = get_file_type(path);
   mime_type_t *type;
   for(type = mime_types; type->ext != NULL; type++){
     if(strcmp(type->ext, file_type) == 0)
       break;
   }
-  found_file->mimetype = type->mime;
+  new_file->mimetype = type->mime;
+
+  //compress file
   //only compress files if they are text
-  if(strncmp(found_file->mimetype, "text", 4)==0){
-    if(compress_file_data(found_file)!=0)
-      fprintf(stderr, ERROR_PREPEND"unable to compress %s\n", found_file->file_path);
+  if(strncmp(new_file->mimetype, "text", 4)==0){
+    if(compress_file_data(new_file)!=0)
+      fprintf(stderr, ERROR_PREPEND"unable to compress %s\n", new_file->file_path);
   }
 
-  return found_file;
+  return new_file;
 }
 
 
@@ -294,10 +291,10 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   }
   signal(SIGUSR1, dump_logs);
 
-  files = malloc(sizeof(loaded_file)*MAX_OPEN_FILES);
+  //init map
   for(size_t i = 0; i < MAX_OPEN_FILES; i++){
-    files[i].file_path = NULL;
-    files[i].data = NULL;
+    files_map[i].file_path = NULL;
+    files_map[i].data = NULL;
   }
   //load openSSL nonsense (algos and strings)
   OpenSSL_add_all_algorithms();  //surely this can be changed to load just the ones we want?

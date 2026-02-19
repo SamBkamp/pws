@@ -85,6 +85,9 @@ int main(int argc, char *argv[]){
     if(strcmp(argv[i], "--daemonize")==0){
       opts.daemonize = 1;
       break;
+    }else {
+      puts(ERROR_PREPEND"unrecognised argument");
+      return 1;
     }
   }
   if(opts.daemonize == 1){

@@ -170,6 +170,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     res->location = cfg->hostname;
   }
 
+  //check if path is in black list
   if(query_map(req->path)==0){
     unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
     if(blacklist_idx < HOST_BLACKLIST_MAX)

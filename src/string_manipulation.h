@@ -4,7 +4,7 @@
 #include <poll.h>
 #include <stdint.h>
 #include "prot.h"
-#define HASH_MAP_SIZE 32
+#define HASH_MAP_SIZE 256
 char *format_dirs(char *path, char *ret_path, size_t ret_path_size,char *document_root);
 int parse_first_line(http_request *req, char* first_line);
 int parse_http_request(http_request *req, char* data);
@@ -19,4 +19,5 @@ int query_map(char *path);
 uint8_t calculate_hash(const char* str);
 char *all_to_upper(char *str);
 char *all_to_lower(char *str);
+uint8_t lfsr8(uint8_t seed, uint8_t *state_out);
 #endif

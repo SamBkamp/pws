@@ -19,7 +19,7 @@
 #include "file_io.h"
 #include "connections.h"
 
-char *map[HASH_MAP_SIZE] = {NULL};
+char *blacklist_map[HASH_MAP_SIZE] = {NULL};
 
 uint8_t calculate_hash(const char* str){
   uint16_t temp_hash = 0;
@@ -35,8 +35,8 @@ int load_blacklink_map(char **token_list){
   char *current_token = token_list[idx];
   while(current_token){
     uint16_t loc = calculate_hash(current_token);
-    if(map[loc] == NULL){
-      map[loc] = current_token;
+    if(blacklist_map[loc] == NULL){
+      blacklist_map[loc] = current_token;
     }else{
       return -1;
     }
@@ -46,7 +46,7 @@ int load_blacklink_map(char **token_list){
 }
 
 int query_map(char *path){
-  char *entry = map[calculate_hash(path)];
+  char *entry = blacklist_map[calculate_hash(path)];
   if(entry != NULL && strcmp(entry, path)==0)
     return 0;
   return -1;

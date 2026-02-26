@@ -64,33 +64,6 @@ int query_map(char *path){
 
 }
 
-int query_map_old(char *path){
-  char *entry = blacklist_map[calculate_hash(path)];
-  if(entry != NULL && strcmp(entry, path)==0)
-    return 0;
-  return -1;
-}
-
-
-//DEPRECATED
-uint8_t calculate_hash(const char* str){
-  uint16_t temp_hash = 0;
-  size_t len = strlen(str);
-  for(size_t i = 0; i < len; i++){
-    temp_hash += (str[i]^len); //literally just vibes
-  }
-  return temp_hash & (32-1);
-}
-
-uint8_t calculate_hash_old(const char* str){
-  uint16_t temp_hash = 0;
-  size_t len = strlen(str);
-  for(size_t i = 0; i < len; i++){
-    temp_hash += (str[i]^len); //literally just vibes
-  }
-  return temp_hash & (32-1);
-}
-
 int load_blacklink_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];

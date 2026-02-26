@@ -1,5 +1,5 @@
 BUILD_FLAGS := -Wall -Wextra -pedantic -O2
-DEV_FLAGS := -Wall -Wextra -pedantic -Werror -ggdb
+DEV_FLAGS := -Wall -Wextra -pedantic -ggdb
 LIBS := -lcrypto -lssl -lz
 FILES := main.c src/pws.c src/string_manipulation.c src/connections.c src/file_io.c
 

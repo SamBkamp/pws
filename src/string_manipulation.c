@@ -21,35 +21,73 @@
 
 char *blacklist_map[HASH_MAP_SIZE] = {NULL};
 
-uint8_t calculate_hash(const char* str){
-  uint16_t temp_hash = 0;
-  size_t len = strlen(str);
-  for(size_t i = 0; i < len; i++){
-    temp_hash += (str[i]^len); //literally just vibes
+//8 bit fibonacci lfsr
+//polynomial: x^8 + x^6 + x^5 + x^4 + 1
+//shifting lsb out first, taps mask therefore becomes 00011101
+uint8_t lfsr8(uint8_t seed, uint8_t *state_out){
+  uint8_t state = seed;
+  uint8_t output = 0;
+
+  for(uint8_t i = 0; i < 8; i++){
+    uint8_t new_bit = state & 0b00000001; //x^8
+    output <<= 1;
+    output |= new_bit;
+    new_bit ^= (state & 0b00000100)>>2; //x^6
+    new_bit ^= (state & 0b00001000)>>3; //x^5
+    new_bit ^= (state & 0b00010000)>>4; //x^4
+    state >>= 1;
+    state |= (new_bit<<7);
   }
-  return temp_hash & (HASH_MAP_SIZE-1);
+  *state_out = state;
+  return output;
+}
+
+int query_map(char *path){
+  uint8_t state = 0;
+  uint8_t seed = path[0];
+  //generate seed by xoring all characters together
+  for(uint8_t i = 1; i < strlen(path); i++)
+    seed ^= path[i];
+
+  //keep getting bits until empty bucket, match or counter expired
+  uint8_t loc = lfsr8(seed, &state);
+
+  for(uint8_t counter = 0; blacklist_map[loc] != NULL
+        && strcmp(blacklist_map[loc], path) != 0
+        && counter < LFSR_PERIOD; counter++){
+    loc = lfsr8(state, &state);
+  }
+
+  if(blacklist_map[loc] != NULL
+     && strcmp(blacklist_map[loc], path) == 0)
+    return 0;
+  return -1;
+
 }
 
 int load_blacklink_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];
   while(current_token){
-    uint16_t loc = calculate_hash(current_token);
-    if(blacklist_map[loc] == NULL){
-      blacklist_map[loc] = current_token;
-    }else{
-      return -1;
+    uint8_t counter = 0;
+    uint8_t state = 0;
+    uint8_t seed = current_token[0];
+    //generate seed by xoring all characters together
+    for(uint8_t i = 1; i < strlen(current_token); i++)
+      seed ^= current_token[i];
+
+    //use lfsr to generate hash until free spot or lfsr period hit
+    uint8_t loc = lfsr8(seed, &state);
+    while(blacklist_map[loc] != NULL && counter < LFSR_PERIOD){
+      loc = lfsr8(state, &state);
+      counter++;
     }
+    if(counter == LFSR_PERIOD) return -1;
+    blacklist_map[loc] = current_token;
+
     current_token = token_list[++idx];
   }
   return 0;
-}
-
-int query_map(char *path){
-  char *entry = blacklist_map[calculate_hash(path)];
-  if(entry != NULL && strcmp(entry, path)==0)
-    return 0;
-  return -1;
 }
 
 

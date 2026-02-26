@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "prot.h"
 #define HASH_MAP_SIZE 256
+#define LFSR_PERIOD 255
 char *format_dirs(char *path, char *ret_path, size_t ret_path_size,char *document_root);
 int parse_first_line(http_request *req, char* first_line);
 int parse_http_request(http_request *req, char* data);

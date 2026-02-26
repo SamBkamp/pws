@@ -103,14 +103,14 @@ loaded_file *get_file_data(char* path){
   for(;
       files_map[map_idx].file_path!=NULL
         && strcmp(files_map[map_idx].file_path, path)!=0
-        && counter < 255;
+        && counter < LFSR_PERIOD;
       counter++){
     map_idx = lfsr8(state, &state);
   }
 
   //if file found, return it
   if(files_map[map_idx].file_path != NULL
-     && counter < 255
+     && counter < LFSR_PERIOD
      && strcmp(files_map[map_idx].file_path, path) == 0)
     return &files_map[map_idx];
 

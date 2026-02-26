@@ -53,7 +53,8 @@ int query_map(char *path){
   uint8_t loc = lfsr8(seed, &state);
 
   for(uint8_t counter = 0; blacklist_map[loc] != NULL
-        && strcmp(blacklist_map[loc], path) != 0; counter++){
+        && strcmp(blacklist_map[loc], path) != 0
+        && counter < LFSR_PERIOD; counter++){
     loc = lfsr8(state, &state);
   }
 
@@ -77,11 +78,11 @@ int load_blacklink_map(char **token_list){
 
     //use lfsr to generate hash until free spot or lfsr period hit
     uint8_t loc = lfsr8(seed, &state);
-    while(blacklist_map[loc] != NULL && counter < 250){
+    while(blacklist_map[loc] != NULL && counter < LFSR_PERIOD){
       loc = lfsr8(state, &state);
       counter++;
     }
-    if(counter == 250) return -1;
+    if(counter == LFSR_PERIOD) return -1;
     blacklist_map[loc] = current_token;
 
     current_token = token_list[++idx];

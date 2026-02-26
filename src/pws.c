@@ -27,8 +27,11 @@
 
 //file cache map
 #define MAX_OPEN_FILES 256
+#define HASH_USAGE_LOG_TIMEOUT 300 //5 minutes in seconds
 loaded_file files_map[MAX_OPEN_FILES];
 uint32_t map_load = 0;
+time_t last_hash_log = 0;
+uint16_t files_map_usage = 0; //MUST BE LARGE ENOUGH TO REPRESENT MAX_OPEN_FILES 
 
 //this has to be done differently...
 #define HOST_BLACKLIST_MAX 10
@@ -130,6 +133,7 @@ loaded_file *get_file_data(char* path){
 
   //check if bucket is occupied
   if(new_file->data != NULL){
+    files_map_usage--;
     fprintf(stdout, INFO_PREPEND"evicting %s from cache\n", new_file->file_path);
     free(new_file->file_path);
     munmap(new_file->data, new_file->length);
@@ -159,7 +163,18 @@ loaded_file *get_file_data(char* path){
     if(compress_file_data(new_file)!=0)
       fprintf(stderr, ERROR_PREPEND"unable to compress %s\n", new_file->file_path);
   }
+  files_map_usage++;
 
+  //utilisation logging
+  time_t now = time(NULL);
+  if(now - last_hash_log > HASH_USAGE_LOG_TIMEOUT){
+    fprintf(stdout,
+            INFO_PREPEND"file cache map utilisation: %d/256 (%d%%)\n",
+            files_map_usage,
+            (files_map_usage/MAX_OPEN_FILES));
+    last_hash_log = now;
+  }
+  
   return new_file;
 }
 

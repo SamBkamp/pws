@@ -51,14 +51,12 @@ int query_map(char *path){
 
   //keep getting bits until empty bucket, match or counter expired
   uint8_t loc = lfsr8(seed, &state);
-  printf("seed/loc for %s: %d/%d\n", path, seed, loc);
 
   for(uint8_t counter = 0; blacklist_map[loc] != NULL
         && strcmp(blacklist_map[loc], path) != 0; counter++){
     loc = lfsr8(state, &state);
   }
 
-  printf("seed/loc for %s: %d/%d\n", path, seed, loc);
   if(blacklist_map[loc] != NULL
      && strcmp(blacklist_map[loc], path) == 0)
     return 0;
@@ -74,7 +72,17 @@ int query_map_old(char *path){
 }
 
 
+//DEPRECATED
 uint8_t calculate_hash(const char* str){
+  uint16_t temp_hash = 0;
+  size_t len = strlen(str);
+  for(size_t i = 0; i < len; i++){
+    temp_hash += (str[i]^len); //literally just vibes
+  }
+  return temp_hash & (32-1);
+}
+
+uint8_t calculate_hash_old(const char* str){
   uint16_t temp_hash = 0;
   size_t len = strlen(str);
   for(size_t i = 0; i < len; i++){
@@ -96,14 +104,12 @@ int load_blacklink_map(char **token_list){
 
     //use lfsr to generate hash until free spot or lfsr period hit
     uint8_t loc = lfsr8(seed, &state);
-    printf("seed: %d ", seed);
     while(blacklist_map[loc] != NULL && counter < 250){
       loc = lfsr8(state, &state);
       counter++;
     }
     if(counter == 250) return -1;
     blacklist_map[loc] = current_token;
-    printf("%s at %d\n", current_token, loc);
 
     current_token = token_list[++idx];
   }

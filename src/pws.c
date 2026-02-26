@@ -26,7 +26,7 @@
 #include "pws.h"
 
 //file cache map
-#define MAX_OPEN_FILES 32
+#define MAX_OPEN_FILES 256
 loaded_file files_map[MAX_OPEN_FILES];
 uint32_t map_load = 0;
 
@@ -89,20 +89,39 @@ int compress_file_data(loaded_file *lf){
 //file handler: handles file loading and caching. Simply returns file contents. Lazy loads into the cache
 loaded_file *get_file_data(char* path){
   struct stat sb;
+  uint8_t state = 0;
+  uint8_t seed = path[0];
 
   //search cache(map) for file
-  uint8_t map_idx = calculate_hash(path);
-  if(files_map[map_idx].file_path != NULL && strcmp(files_map[map_idx].file_path, path) == 0)
+  //generate seed by xoring all characters together
+  for(uint8_t i = 1; i < strlen(path); i++)
+    seed ^= path[i];
+
+  //keep hashing (generating bits) until timeout, null or found
+  uint8_t map_idx = lfsr8(seed, &state);
+  uint8_t counter = 0;
+  for(;
+      files_map[map_idx].file_path!=NULL
+        && strcmp(files_map[map_idx].file_path, path)!=0
+        && counter < 255;
+      counter++){
+    map_idx = lfsr8(state, &state);
+  }
+
+  //if file found, return it
+  if(files_map[map_idx].file_path != NULL
+     && counter < 255
+     && strcmp(files_map[map_idx].file_path, path) == 0)
     return &files_map[map_idx];
 
-
-  //check if file even exists, quick return if no. not checking all errno bc regardless of what errno, this function cannot/should not continue
+  /*---file not found in cachemap---*/
+  //check if file even exists on disk, quick return if no
   if(stat(path, &sb) < 0)
     return (loaded_file *)-1;
 
   //cache miss - load the file and requisite information
   char *file_data  = open_file(path, &(sb.st_size));
-  uint8_t new_file_hash = calculate_hash(path);
+  uint8_t new_file_hash = map_idx;
   loaded_file *new_file = &files_map[new_file_hash];
 
   //either not found or other mapping/IO failure

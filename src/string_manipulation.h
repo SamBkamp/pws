@@ -17,7 +17,6 @@ char *open_file(char *path, long *bytes);
 char *generate_error(size_t code, size_t *len);
 int load_blacklink_map(char **token_list);
 int query_map(char *path);
-uint8_t calculate_hash(const char* str);
 char *all_to_upper(char *str);
 char *all_to_lower(char *str);
 uint8_t lfsr8(uint8_t seed, uint8_t *state_out);

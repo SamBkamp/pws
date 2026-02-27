@@ -178,7 +178,6 @@ void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   };
   if(send_http_response(&connection, &res) < 0)
     perror(ERROR_PREPEND"write");
-  puts(WARNING_PREPEND"unsecured connection dealt with");
   close(unsec_fd);
   return;
 }

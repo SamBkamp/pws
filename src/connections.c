@@ -178,7 +178,6 @@ void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   };
   if(send_http_response(&connection, &res) < 0)
     perror(ERROR_PREPEND"write");
-  puts(WARNING_PREPEND"unsecured connection dealt with");
   close(unsec_fd);
   return;
 }
@@ -213,48 +212,50 @@ size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
 
 
 int send_http_response(ll_node* connection, http_response *res){
-  char *buffer = malloc(res->content_length + 1024);
-  size_t bytes_printed;
+  char header_buffer[MAX_HEADER_SIZE];
+  size_t bytes_printed = construct_headers(res, header_buffer, MAX_HEADER_SIZE);
   int bytes_written;
-  bytes_printed = construct_headers(res, buffer, res->content_length+1024);
 
-  if(connection->cSSL != NULL){
+  if(connection->cSSL != NULL){ //for tls connections
     uint32_t retries = 2000; //random ass choice. Will max at 10k uS
     //returns >0 OK. 0<= ERR
-    //write headers
-    bytes_written = block_limit_write(connection->cSSL, retries, buffer, bytes_printed);
+    /* write headers */
+    bytes_written = block_limit_write(connection->cSSL, retries, header_buffer, bytes_printed);
     if(bytes_written <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes_written, stderr);
       return -1;
     }
-    //write body
+    /* write body */
     bytes_written += block_limit_write(connection->cSSL, retries, res->body, res->content_length);
     if(bytes_written <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes_written, stderr);
     }
-  }else{
+
+
+  }else{ //for unsecured connections
     // returns n-bytes OK, < 0 ERR
     unsigned int idx = 0, max_retries = 2000;
-    bytes_written = write(connection->fd, buffer, bytes_printed);
-    if(bytes_written<0
+    /* writes headers */
+    bytes_written = write(connection->fd, header_buffer, bytes_printed);
+    if(bytes_written<0 //inlined the block limit write
        && (errno == EAGAIN || errno == EWOULDBLOCK)
        && idx < max_retries){
       idx++;
-      bytes_written = write(connection->fd, buffer, bytes_printed);
+      bytes_written = write(connection->fd, header_buffer, bytes_printed);
    }
     if(bytes_written < 0){
       perror(ERROR_PREPEND"couldn't write()");
       return -1;
     }
-    //write body
+    /* write body */
     bytes_written += write(connection->fd, res->body, res->content_length);
-    if(bytes_written<0
+    if(bytes_written<0 //inlined the block limit write
        && (errno == EAGAIN || errno == EWOULDBLOCK)
        && idx < max_retries){
       idx++;
-      bytes_written = write(connection->fd, buffer, bytes_printed);
+      bytes_written = write(connection->fd, header_buffer, bytes_printed);
     }
     if(bytes_written < 0){
       perror(ERROR_PREPEND"couldn't write()");

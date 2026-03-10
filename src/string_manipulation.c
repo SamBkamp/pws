@@ -168,7 +168,7 @@ void print_SSL_errstr(int SSL_err, FILE* stream){
 
 //takes a file path and returns a substring with its file type (ie. the characters after the last '.')
 //NON-DESTRUCTIVE
-char *get_file_type(char* path){
+char *get_file_ext(char* path){
   if(path == NULL)
     return (char *)-1;
   char *end = path + strlen(path)-1;

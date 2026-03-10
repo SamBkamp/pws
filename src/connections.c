@@ -189,7 +189,7 @@ char *http_codestr_from_code(uint16_t response_code){
 }
 
 size_t construct_headers(http_response *res, char *buffer, size_t buffer_len){
-  const char *default_headers = "HTTP/1.1 %d %s\r\nConnection: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n"; //headers that will always be sent
+  const char *default_headers = "HTTP/1.1 %d %s\r\nServer: "VERSION_NUMBER"\r\nConnection: %s\r\nContent-Type: %s\r\nContent-Length: %d\r\n"; //headers that will always be sent
   size_t bytes_printed = snprintf(buffer, buffer_len, default_headers,
            res->response_code,
            http_codestr_from_code(res->response_code),

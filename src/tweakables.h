@@ -5,8 +5,15 @@
 #define CLIENTS_MAX 10
 #define QUEUE_LEN 10
 
-#define HTTP_REQ_OBJ_METHOD_SIZE 10 //<- don't touch this. it won't break anything if you do but theres no reason to tweak this. Eventually this implementation will be removed bc its weird
-//it defines the char array size for the method field in the http_request struct
+//defines the char array size for the method field in the http_request struct (GET, POST, etc.)
+#define HTTP_REQ_OBJ_METHOD_SIZE 10 /* <- don't touch this.
+                                       it won't break anything if you do
+                                       but theres no reason to tweak this.
+                                       Eventually this implementation will
+                                       be removed bc its weird */
+
+
+#define MAX_HEADER_SIZE 1024 //max http header size pws accepts
 
 #define KEEP_ALIVE_MAX_REQ 4
 #define KEEP_ALIVE_TIMEOUT 20 //in seconds

@@ -11,7 +11,7 @@ int parse_first_line(http_request *req, char* first_line);
 int parse_http_request(http_request *req, char* data);
 void free_http_request(http_request *req);
 char* long_to_ipstr(unsigned long IP);
-char *get_file_type(char* path);
+char *get_file_ext(char* path);
 void print_SSL_errstr(int SSL_err, FILE* stream);
 char *open_file(char *path, long *bytes);
 char *generate_error(size_t code, size_t *len);

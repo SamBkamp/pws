@@ -97,6 +97,7 @@ loaded_file *get_file_data(char* path){
 
   //search cache(map) for file
   //generate seed by xoring all characters together
+  //TODO: better seed mixer
   for(uint8_t i = 1; i < strlen(path); i++)
     lfsr_seed ^= path[i];
 
@@ -148,11 +149,13 @@ loaded_file *get_file_data(char* path){
   new_file->file_path = malloc(strlen(path)+1);
   strcpy(new_file->file_path, path);
 
+  /* TODO: better lookup algorithm? List is not long,
+     fits entirely in L1 cache on most modern machines so maybe not necessary */
   //get and store mime type
-  char *file_type = get_file_type(path);
+  char *file_ext = get_file_ext(path);
   mime_type_t *type;
   for(type = mime_types; type->ext != NULL; type++){
-    if(strcmp(type->ext, file_type) == 0)
+    if(strcmp(type->ext, file_ext) == 0)
       break;
   }
   new_file->mimetype = type->mime;

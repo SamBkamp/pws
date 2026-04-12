@@ -28,6 +28,12 @@
 #define WARNING_PREPEND "\x1B[1;33m[WARN]\x1B[0m "
 #define INFO_PREPEND "\x1B[1;36m[INFO]\x1B[0m "
 
+
+typedef struct{
+  uint8_t daemonize;
+  uint8_t blacklinks_disable;
+}prog_opts;
+
 typedef struct{
   char *private_key_path;
   char *certificate_path;
@@ -36,6 +42,7 @@ typedef struct{
   char *document_root;
   unsigned int hostname_len;
   unsigned int poll_timeout;
+  prog_opts *opts;
 }config;
 
 typedef struct{
@@ -44,10 +51,6 @@ typedef struct{
   struct pollfd listener_sockets[2];
   struct pollfd secured_sockets[CLIENTS_MAX];
 }program_context;
-
-typedef struct{
-  uint8_t daemonize;
-}prog_opts;
 
 typedef struct ll_node{
   uint8_t requests;
@@ -64,7 +67,14 @@ typedef struct{
   char *path;
   uint8_t connection;
   char *host;
+  uint8_t accepted_encoding;
 }http_request;
+
+/* masks for the accepted_encoding field in http_request */
+#define AE_deflate_mask 1
+#define AE_gzip_mask 2
+#define AE_zstd_mask 4
+#define AE_br_mask 8
 
 typedef struct{
   uint16_t response_code;

@@ -35,7 +35,7 @@ void sig_handler(int sig){
   exit(sig);
 }
 
-void fork_worker(const char *path){
+void fork_worker(const char *path, prog_opts *opts){
   pid_t parent = getppid();
   //create new session and become session leader (with no tty)
   setsid();
@@ -71,7 +71,7 @@ void fork_worker(const char *path){
 
   //all done! ready to work
   puts("daemonization successful");
-  pws();
+  pws(opts);
 }
 
 
@@ -82,10 +82,11 @@ void lame_ass_sig_handler(){ //this exists purely so pause() can return
 int main(int argc, char *argv[]){
   prog_opts opts = {0};
   for(uint8_t i = 1; i < argc; i++){
-    if(strcmp(argv[i], "--daemonize")==0){
+    if(strcmp(argv[i], "--daemonize")==0)
       opts.daemonize = 1;
-      break;
-    }else {
+    else if(strcmp(argv[i], "--no-blacklinks")==0)
+      opts.blacklinks_disable = 1;
+    else {
       puts(ERROR_PREPEND"unrecognised argument");
       return 1;
     }
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]){
       perror("fork");
       return 1;
     case 0: //child
-      fork_worker(cwd);
+      fork_worker(cwd, &opts);
       break;
     default:
       signal(SIGCONT, lame_ass_sig_handler); //man this feels so stupid
@@ -115,6 +116,6 @@ int main(int argc, char *argv[]){
   }
   else{
     puts("running as foreground application");
-    return pws();
+    return pws(&opts);
   }
 }

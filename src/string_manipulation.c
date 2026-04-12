@@ -65,6 +65,8 @@ int query_map(char *path){
 
 }
 
+//takes an array of c-strings and loads them into the hashmap
+//hashmap uses lfsr8 to generate indices
 int load_blacklink_map(char **token_list){
   uint16_t idx = 0;
   char *current_token = token_list[idx];

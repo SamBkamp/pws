@@ -79,7 +79,7 @@ void destroy_node(ll_node *node){
   case 0: //still needs to read from socket to complete bilateral shutdown
     ;
     uint32_t timeout = 300;
-    int read_res = block_limit_read(node->cSSL, timeout, ignore, 1024);    //blocks while reading from ssl socket
+    int read_res = block_limit_read(node->cSSL, timeout, ignore, sizeof(ignore)-1);    //blocks while reading from ssl socket
     int ssl_error_code = SSL_get_error(node->cSSL, read_res);
     if(read_res <= 0 && ssl_error_code != SSL_ERROR_ZERO_RETURN){ //if no error or the "error" is that the peer closed, everything worked
       //SSL_ERROR_ZERO_RETURN = peer sent close_notify

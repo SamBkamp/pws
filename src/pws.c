@@ -207,8 +207,8 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
     res->location = cfg->hostname;
   }
 
-  //check if path is in black list
-  if(query_map(req->path)==0){
+  //check if wwe are using blacklinks and if path is in black list
+  if(cfg->opts->blacklinks_disable == 0 && query_map(req->path)==0){
     unsigned long ip =  conn_details->peer_addr->sin_addr.s_addr;
     if(blacklist_idx < HOST_BLACKLIST_MAX)
       host_blacklist[blacklist_idx++] = ip;
@@ -306,7 +306,7 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
   return req->connection & res->connection; //make sure both the client (req) and the server (res) want to keep-alive
 }
 
-int init(program_context *p_ctx, SSL_CTX **sslctx){
+int init(program_context *p_ctx, SSL_CTX **sslctx, prog_opts *cmd_opts){
   puts(VERSION_NUMBER);
   fputs("zlib ", stdout);
   puts(zlibVersion());
@@ -315,6 +315,17 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   //ignore sigpipe errors. They still need to be handled locally but at least this will stop the program from crashing
   signal(SIGPIPE, SIG_IGN);
 
+  switch(cmd_opts->blacklinks_disable){
+  case 1:
+    puts(INFO_PREPEND"not using blacklinks");
+    break;
+  default:
+    break;
+  }
+
+  //put command-line options in config
+  p_ctx->cfg.opts = cmd_opts;
+  //load config from config file
   if(load_config(&p_ctx->cfg)<0){
     fputs(WARNING_PREPEND"could not load config file\n", stderr);
     return 1;
@@ -358,6 +369,9 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
   if(use_chain != 1)
     fputs(WARNING_PREPEND"not using certificate chain\n", stdout);
 
+  if(cmd_opts->blacklinks_disable == 1)
+    return 0;
+
   char **blacklinks = load_blacklinks("blacklinks.cfg");
   if(!blacklinks)
     fputs(WARNING_PREPEND"No honeypot loaded\n", stdout);
@@ -371,7 +385,7 @@ int init(program_context *p_ctx, SSL_CTX **sslctx){
 }
 
 
-int pws(){
+int pws(prog_opts *cmd_opts){
   program_context p_ctx = {0};
   int ssl_sockfd, unsecured_sockfd;
   ll_node head = {
@@ -381,7 +395,7 @@ int pws(){
   ll_node *tail = &head;
   SSL_CTX *sslctx = NULL;
 
-  if(init(&p_ctx, &sslctx)!=0)
+  if(init(&p_ctx, &sslctx, cmd_opts)!=0)
     return EXIT_FAILURE;
 
 

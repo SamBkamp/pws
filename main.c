@@ -74,8 +74,8 @@ void fork_worker(const char *path, prog_opts *opts){
   pws(opts);
 }
 
-
-void lame_ass_sig_handler(){ //this exists purely so pause() can return
+//this exists purely so pause() can return
+void lame_ass_sig_handler(){
   return;
 }
 

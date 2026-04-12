@@ -1,4 +1,4 @@
-BUILD_FLAGS := -Wall w -O3
+BUILD_FLAGS := -Wall -O3
 DEV_FLAGS := -Wall -Wextra -pedantic -ggdb
 LIBS := -lcrypto -lssl -lz
 FILES := main.c src/pws.c src/string_manipulation.c src/connections.c src/file_io.c

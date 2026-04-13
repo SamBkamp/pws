@@ -261,7 +261,7 @@ ssize_t requests_handler(http_request *req, http_response *res, ll_node *conn_de
 uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *req, http_response *res, int connection_index){
   char buffer[2048], *ip_str;
   int bytes_read;
-  struct pollfd connection_pollfd = ctx->secured_sockets[connection_index];
+  struct pollfd connection_pollfd = ctx->client_sockets[connection_index];
 
   //socket hung up or error'd
   if((connection_pollfd.revents & POLLHUP) > 0
@@ -273,7 +273,7 @@ uint8_t connections_handler(program_context *ctx, ll_node *node, http_request *r
     return 1;
 
 
-  bytes_read = block_limit_read(node->cSSL, 800, buffer, 2047);
+  bytes_read = block_limit_read(node, 800, buffer, 2047);
   buffer[bytes_read] = 0;
   //couldn't read data
   if(bytes_read <= 0){
@@ -430,15 +430,16 @@ int pws(prog_opts *cmd_opts){
       goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
 
     if((p_ctx.listener_sockets[SOCKET_HTTP].revents & POLLIN) > 0){
-      if(cmd_opts->unsecure_allow == 1)
-        printf("YAHOO\n");
-      unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);      
+      if(cmd_opts->unsecure_allow == 1){
+        if(new_unsecured_connection(&tail, unsecured_sockfd, &p_ctx.client_sockets[p_ctx.clients_connected]) != NULL)
+          ++p_ctx.clients_connected;
+      }else unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);      
     }
 
     //check for and then set up new connections
     if(p_ctx.clients_connected < CLIENTS_MAX
        && (p_ctx.listener_sockets[SOCKET_HTTPS].revents & POLLIN) > 0
-       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.secured_sockets[p_ctx.clients_connected], host_blacklist, blacklist_idx) != NULL)
+       && new_ssl_connections(&tail, sslctx, ssl_sockfd, &p_ctx.client_sockets[p_ctx.clients_connected], host_blacklist, blacklist_idx) != NULL)
       ++p_ctx.clients_connected;
 
     //reached client connected max
@@ -446,7 +447,7 @@ int pws(prog_opts *cmd_opts){
       fputs(INFO_PREPEND"reached connected client max\n", stderr);
 
   handle_existing_connections:
-    ret_poll = poll(p_ctx.secured_sockets, p_ctx.clients_connected, p_ctx.cfg.poll_timeout);
+    ret_poll = poll(p_ctx.client_sockets, p_ctx.clients_connected, p_ctx.cfg.poll_timeout);
     if(ret_poll<0){
       perror(ERROR_PREPEND"poll failure");
       continue;
@@ -472,8 +473,8 @@ int pws(prog_opts *cmd_opts){
       conn = prev_conn;
       p_ctx.clients_connected--;
       //remove fd from pollfd array by moving all subsequent items down one (this shouldnt out of bounds bc in the case where connection_index+1 = out of bounds, last argument is 0)
-      memmove(&p_ctx.secured_sockets[connection_index],
-              &p_ctx.secured_sockets[connection_index+1],
+      memmove(&p_ctx.client_sockets[connection_index],
+              &p_ctx.client_sockets[connection_index+1],
               sizeof(struct pollfd) * (p_ctx.clients_connected-connection_index));
     }
   }

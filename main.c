@@ -90,7 +90,8 @@ int main(int argc, char *argv[]){
     else if(strcmp(argv[i], "--allow_unsecure")==0)
       opts.unsecure_allow = 1;
     else {
-      puts(ERROR_PREPEND"unrecognised argument");
+      puts(ERROR_PREPEND"unrecognised argument[s]");
+      puts("Usage:\n--daemonize\n--no-blacklinks\n--allow_unsecure");
       return 1;
     }
   }

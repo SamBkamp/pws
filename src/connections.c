@@ -129,6 +129,8 @@ int open_connection(int *sockfd, int port){
   return 0;
 }
 
+
+
 //checks poll for unsecured port and sends 301 message back
 void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
   struct sockaddr_in peer;
@@ -267,6 +269,32 @@ int send_http_response(ll_node* connection, http_response *res){
   if(bytes_written != (int)bytes_printed + (int)res->content_length)
     printf("%s ITS ALL FRIED, INCOMPLETE WRITE\n", ERROR_PREPEND);
   return bytes_written;
+}
+
+
+ll_node* new_unsecured_connection(ll_node **tail, int sockfd, struct pollfd *pfd){
+  ll_node *node = malloc(sizeof(ll_node));
+  if(node == NULL){
+    perror(ERROR_PREPEND"could not allocate space for unsecured connection");
+    return NULL;
+  }
+
+  node->peer_addr = malloc(sizeof(struct sockaddr_in));
+  node->peer_size = sizeof(struct sockaddr_in);
+  node->fd = accept4(sockfd, (struct sockaddr*)node->peer_addr, &node->peer_size, SOCK_NONBLOCK);
+  if(node->fd < 0){
+    perror(ERROR_PREPEND"accept");
+    return NULL;
+  }
+
+  node->requests = 0;
+  node->conn_opened = time(NULL);
+  node->next = NULL;
+  (*tail)->next = node;
+  pfd->fd = (*tail)->next->fd;
+  pfd->events = POLLIN | POLLOUT;
+  *tail = node;
+  return node;
 }
 
 //handler function to accept new SSL connections and append them to the Lnked List

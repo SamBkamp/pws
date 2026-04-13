@@ -32,6 +32,7 @@
 typedef struct{
   uint8_t daemonize;
   uint8_t blacklinks_disable;
+  uint8_t unsecure_allow;
 }prog_opts;
 
 typedef struct{

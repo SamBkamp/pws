@@ -429,8 +429,11 @@ int pws(prog_opts *cmd_opts){
     if(ret_poll == 0) //no new events
       goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
 
-    if((p_ctx.listener_sockets[SOCKET_HTTP].revents & POLLIN) > 0)
-      unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);
+    if((p_ctx.listener_sockets[SOCKET_HTTP].revents & POLLIN) > 0){
+      if(cmd_opts->unsecure_allow == 1)
+        printf("YAHOO\n");
+      unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);      
+    }
 
     //check for and then set up new connections
     if(p_ctx.clients_connected < CLIENTS_MAX

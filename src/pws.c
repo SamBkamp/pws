@@ -430,10 +430,10 @@ int pws(prog_opts *cmd_opts){
       goto handle_existing_connections; //skip the listener socket handlers (this is probably bad)
 
     if((p_ctx.listener_sockets[SOCKET_HTTP].revents & POLLIN) > 0){
-      if(cmd_opts->unsecure_allow == 1){
+      if(cmd_opts->unsecure_allow == 1){ //handle like a normal packet
         if(new_unsecured_connection(&tail, unsecured_sockfd, &p_ctx.client_sockets[p_ctx.clients_connected]) != NULL)
           ++p_ctx.clients_connected;
-      }else unsecured_connection_handler(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname);      
+      }else unsecured_redirect(&p_ctx.listener_sockets[0], p_ctx.cfg.hostname); //redirect
     }
 
     //check for and then set up new connections

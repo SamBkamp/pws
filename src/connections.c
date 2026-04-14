@@ -159,8 +159,8 @@ int open_connection(int *sockfd, int port){
 
 
 
-//checks poll for unsecured port and sends 301 message back
-void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
+//redirects connections to https
+void unsecured_redirect(struct pollfd *poll_settings, char *hostname){
   struct sockaddr_in peer;
   socklen_t peer_size = sizeof(peer);
   int unsec_fd = accept4(poll_settings->fd, (struct sockaddr*)&peer, &peer_size, SOCK_NONBLOCK);

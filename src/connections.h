@@ -13,7 +13,7 @@ extern char **msd[];
 
 void destroy_node(ll_node *node);
 int open_connection(int *sockfd, int port);
-void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname);
+void unsecured_redirect(struct pollfd *poll_settings, char *hostname);
 int send_http_response(ll_node* connection, http_response *res);
 ll_node* new_ssl_connections(ll_node **tail, SSL_CTX *sslctx, int ssl_sockfd, struct pollfd *pfd, unsigned long *blacklist, uint8_t blacklist_idx);
 ll_node* new_unsecured_connection(ll_node **tail, int sockfd, struct pollfd *pfd);

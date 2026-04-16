@@ -17,6 +17,13 @@ If you want to run it as a daemon then you can run it with the *--daeomize* flag
 This will print the PID of the daemon.
 When running PWS as a daemon, stdout and stderr will be rerouted to pws.log and pws_error.log respectively. These files will be created in the directory the program was started in.
 
+### more options:
+You can turn off ip blocking and allow clients to connect to the unsecured http port with these two arguments respectively:
+```bash
+--no-blacklinks
+--allow_unsecure
+```
+
 
 ## configure pws
 *config.pws* contains the config data for pws. Some fields are required and some fields may be left blank.

@@ -82,12 +82,16 @@ void lame_ass_sig_handler(int sig){
 int main(int argc, char *argv[]){
   prog_opts opts = {0};
   for(uint8_t i = 1; i < argc; i++){
+    //surely we can do better than an if/else if tree lol
     if(strcmp(argv[i], "--daemonize")==0)
       opts.daemonize = 1;
     else if(strcmp(argv[i], "--no-blacklinks")==0)
       opts.blacklinks_disable = 1;
+    else if(strcmp(argv[i], "--allow_unsecure")==0)
+      opts.unsecure_allow = 1;
     else {
-      puts(ERROR_PREPEND"unrecognised argument");
+      puts(ERROR_PREPEND"unrecognised argument[s]");
+      puts("Usage:\n--daemonize\n--no-blacklinks\n--allow_unsecure");
       return 1;
     }
   }

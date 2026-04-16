@@ -32,6 +32,7 @@
 typedef struct{
   uint8_t daemonize;
   uint8_t blacklinks_disable;
+  uint8_t unsecure_allow;
 }prog_opts;
 
 typedef struct{
@@ -49,7 +50,7 @@ typedef struct{
   config cfg;
   int clients_connected;
   struct pollfd listener_sockets[2];
-  struct pollfd secured_sockets[CLIENTS_MAX];
+  struct pollfd client_sockets[CLIENTS_MAX];
 }program_context;
 
 typedef struct ll_node{

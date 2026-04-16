@@ -31,30 +31,55 @@ char **msd[] = {one_hundreds, two_hundreds, three_hundreds, four_hundreds, five_
 
 //blocking SSL_read but with attempt limit. If attempt limit is reached, the last SSL_read ret is returned
 //max blocking timeout is (limit*5)us
-int block_limit_read(SSL* cSSL, uint32_t limit, char* res_text, size_t res_text_size){
+int block_limit_read(ll_node *node, uint32_t limit, char* res_text, size_t res_text_size){
   uint32_t idx = 0;
-  int ret = SSL_read(cSSL, res_text, res_text_size);
-  int errtype = SSL_get_error(cSSL, ret);
-  while(errtype == SSL_ERROR_WANT_READ && idx < limit){ //we don't need to check ret as errtype will return a success macro if ret > 0 per docs
-    usleep(5);
-    ret = SSL_read(cSSL, res_text, res_text_size);
-    errtype = SSL_get_error(cSSL, ret);
-    idx++;
+  int ret;
+  /*
+    TODO: combine these if/else into a more generalised approach so they use the same while loop
+  */
+  if(node->cSSL != NULL){//if SSL socket
+    ret = SSL_read(node->cSSL, res_text, res_text_size);
+    int errtype = SSL_get_error(node->cSSL, ret);
+    while(errtype == SSL_ERROR_WANT_READ && idx < limit){ //we don't need to check ret as errtype will return a success macro if ret > 0 per docs
+      usleep(5);
+      ret = SSL_read(node->cSSL, res_text, res_text_size);
+      errtype = SSL_get_error(node->cSSL, ret);
+      idx++;
+    }
+  }else{ //if non SSL socket
+    ret = read(node->fd, res_text, res_text_size);
+    while((ret == EAGAIN || ret == EWOULDBLOCK) && idx < limit){
+      usleep(5);
+      ret = read(node->fd, res_text, res_text_size);
+      idx++;
+    }
   }
+
   return ret;
 }
 
 //blocking SSL_write with attempt limit. See block_limit_read()
-int block_limit_write(SSL *cSSL, uint32_t limit, char* buf, int buf_size){
+int block_limit_write(ll_node *node, uint32_t limit, char* buf, int buf_size){
   uint32_t idx = 0;
-  int ret = SSL_write(cSSL, buf, buf_size);
-  int errtype = SSL_get_error(cSSL, ret);
-  while(errtype == SSL_ERROR_WANT_WRITE && idx < limit){
-    usleep(5);
-    ret = SSL_write(cSSL, buf, buf_size);
-    errtype = SSL_get_error(cSSL, ret);
-    idx++;
+  int ret;
+  if(node->cSSL != NULL){
+    ret = SSL_write(node->cSSL, buf, buf_size);
+    int errtype = SSL_get_error(node->cSSL, ret);
+    while(errtype == SSL_ERROR_WANT_WRITE && idx < limit){
+      usleep(5);
+      ret = SSL_write(node->cSSL, buf, buf_size);
+      errtype = SSL_get_error(node->cSSL, ret);
+      idx++;
+    }
+  }else{ //if non SSL socket
+    ret = write(node->fd, buf, buf_size);
+    while((ret == EAGAIN || ret == EWOULDBLOCK) && idx < limit){
+      usleep(5);
+      ret = write(node->fd, buf, buf_size);
+      idx++;
+    }
   }
+
   return ret;
 }
 
@@ -74,28 +99,31 @@ int block_limit_accept(SSL* cSSL, uint32_t limit){
 
 void destroy_node(ll_node *node){
   char ignore[1024];
-  int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
-  switch(ssl_shutdown_retval){
-  case 0: //still needs to read from socket to complete bilateral shutdown
-    ;
-    uint32_t timeout = 300;
-    int read_res = block_limit_read(node->cSSL, timeout, ignore, sizeof(ignore)-1);    //blocks while reading from ssl socket
-    int ssl_error_code = SSL_get_error(node->cSSL, read_res);
-    if(read_res <= 0 && ssl_error_code != SSL_ERROR_ZERO_RETURN){ //if no error or the "error" is that the peer closed, everything worked
-      //SSL_ERROR_ZERO_RETURN = peer sent close_notify
-      fputs(SSL_ERROR_PREPEND"couldn't read from unfinished ssl socket: ", stderr);
-      print_SSL_errstr(ssl_error_code, stderr);
-    }else
-      fputs(INFO_PREPEND"shutdown completed\n", stderr);
-  case 1: //successful shutdown
-    break;
-  default: //shutdown error
-    fputs(SSL_ERROR_PREPEND"couldn't shut down ssl socket: ", stderr);
-    print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
+  if(node->cSSL != NULL){
+    int ssl_shutdown_retval = SSL_shutdown(node->cSSL);
+    switch(ssl_shutdown_retval){
+    case 0: //still needs to read from socket to complete bilateral shutdown
+      ;
+      uint32_t timeout = 300;
+      int read_res = block_limit_read(node, timeout, ignore, sizeof(ignore)-1);    //blocks while reading from ssl socket
+      int ssl_error_code = SSL_get_error(node->cSSL, read_res);
+      if(read_res <= 0 && ssl_error_code != SSL_ERROR_ZERO_RETURN){ //if no error or the "error" is that the peer closed, everything worked
+        //SSL_ERROR_ZERO_RETURN = peer sent close_notify
+        fputs(SSL_ERROR_PREPEND"couldn't read from unfinished ssl socket: ", stderr);
+        print_SSL_errstr(ssl_error_code, stderr);
+      }else
+        fputs(INFO_PREPEND"shutdown completed\n", stderr);
+    case 1: //successful shutdown
+      break;
+    default: //shutdown error
+      fputs(SSL_ERROR_PREPEND"couldn't shut down ssl socket: ", stderr);
+      print_SSL_errstr(SSL_get_error(node->cSSL, ssl_shutdown_retval), stderr);
+    }
+    SSL_free(node->cSSL);
   }
 
+
   if(close(node->fd)<0) perror(WARNING_PREPEND"couldn't close()");
-  SSL_free(node->cSSL);
   free(node->peer_addr);
   free(node);
 }
@@ -129,8 +157,10 @@ int open_connection(int *sockfd, int port){
   return 0;
 }
 
-//checks poll for unsecured port and sends 301 message back
-void unsecured_connection_handler(struct pollfd *poll_settings, char *hostname){
+
+
+//redirects connections to https
+void unsecured_redirect(struct pollfd *poll_settings, char *hostname){
   struct sockaddr_in peer;
   socklen_t peer_size = sizeof(peer);
   int unsec_fd = accept4(poll_settings->fd, (struct sockaddr*)&peer, &peer_size, SOCK_NONBLOCK);
@@ -222,14 +252,14 @@ int send_http_response(ll_node* connection, http_response *res){
     uint32_t retries = 2000; //random ass choice. Will max at 10k uS
     //returns >0 OK. 0<= ERR
     /* write headers */
-    bytes_written = block_limit_write(connection->cSSL, retries, header_buffer, bytes_printed);
+    bytes_written = block_limit_write(connection, retries, header_buffer, bytes_printed);
     if(bytes_written <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes_written, stderr);
       return -1;
     }
     /* write body */
-    bytes_written += block_limit_write(connection->cSSL, retries, res->body, res->content_length);
+    bytes_written += block_limit_write(connection, retries, res->body, res->content_length);
     if(bytes_written <= 0){
       fputs(SSL_ERROR_PREPEND"couldn't SSL_write(): ", stderr);
       print_SSL_errstr(bytes_written, stderr);
@@ -267,6 +297,32 @@ int send_http_response(ll_node* connection, http_response *res){
   if(bytes_written != (int)bytes_printed + (int)res->content_length)
     printf("%s ITS ALL FRIED, INCOMPLETE WRITE\n", ERROR_PREPEND);
   return bytes_written;
+}
+
+
+ll_node* new_unsecured_connection(ll_node **tail, int sockfd, struct pollfd *pfd){
+  ll_node *node = malloc(sizeof(ll_node));
+  if(node == NULL){
+    perror(ERROR_PREPEND"could not allocate space for unsecured connection");
+    return NULL;
+  }
+
+  node->peer_addr = malloc(sizeof(struct sockaddr_in));
+  node->peer_size = sizeof(struct sockaddr_in);
+  node->fd = accept4(sockfd, (struct sockaddr*)node->peer_addr, &node->peer_size, SOCK_NONBLOCK);
+  if(node->fd < 0){
+    perror(ERROR_PREPEND"accept");
+    return NULL;
+  }
+
+  node->requests = 0;
+  node->conn_opened = time(NULL);
+  node->next = NULL;
+  (*tail)->next = node;
+  pfd->fd = (*tail)->next->fd;
+  pfd->events = POLLIN | POLLOUT;
+  *tail = node;
+  return node;
 }
 
 //handler function to accept new SSL connections and append them to the Lnked List
